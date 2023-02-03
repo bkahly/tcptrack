@@ -21,9 +21,9 @@ public:
 	// general tcptrack configuration settings
 	// should probably move these later
 	time_t remto; // closed connection removal timeout
-	bool fastmode; // fastmode enabled or disabled?
 	bool detect; // detect pre-existing connections?
 	bool promisc; // enable promisc mode?
+        unsigned int refresh_intvl; // How often are we refreshing the UI (usec)
 
 	// other threads call this when they have an unhandled exception.
 	// shuts tcptrack down abruptly and prints the error.

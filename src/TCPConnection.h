@@ -56,7 +56,7 @@ public:
 
 	// see if packet p is relevant to this connection. 
 	// if it is, true will be returned and this object's internal 
-	// state will be changed to relect the new packet.
+	// state will be changed to reflect the new packet.
 	bool acceptPacket( TCPCapture &p );
 
 	// get the addresses/ports which are the endpoints for this
@@ -65,6 +65,10 @@ public:
 	portnum_t srcPort();
 	IPAddress & dstAddr();
 	portnum_t dstPort();
+
+        // TODO Store hostnames
+        //char *dstHost();
+        //char *srcHost();
 
 	// returns one of the TCP_STATE_* values reflecting the connection's
 	// state.
@@ -79,13 +83,11 @@ public:
 	// number of seconds since last packet sent either way
 	time_t getIdleSeconds(); 
 
-	// called to recalculate averages and perform any other internal 
-	// updates to counters and stuff.
-	// should be called at least once a second.
-	// if fastMode is enabled, calling it more freqently will keep 
-	// counters closer to real time.
-	// if fastMode is not enabled, there's no point in calling it more
-	// than once a second, but it won't hurt.
+	// called to perform internal updates to counters and stuff.
+	// should be called exactly once per refresh interval.
+        void updateCounters();
+
+	// called to recalculate averages
 	void recalcAvg();
 
 	// this implements an "activity light" that works just like the
@@ -96,32 +98,18 @@ public:
 	// number of packets sent either way in total for this connection
 	int getPacketCount();
 
-	// number of payload bytes sent either way in total for this connection
-	long getPayloadByteCount();
-
-	// average number of packets per second this connection is doing
-	int getPacketsPerSecond();
-
-	// average number of packets per second this connection is doing
-	// this counts only the packet's actual tcp payload, no headers
-	unsigned int getPayloadBytesPerSecond();
+	// number of bytes sent either way in total for this connection
+	long getTotalByteCount();
 
 	// average number of bytes per second this connection is doing
 	// this counts the tcp and ip headers (but not link layer header)
 	int getAllBytesPerSecond();
 
-	// returns a key that fairly uniquely identifies this connection
-	// used for hashing purposes
-	//int getKey();
-
 	// a SocketPair is two IPAddresses and two TCP port numbers.
 	// The pair of each represents this connections src/dst addrs & ports.
 	SocketPair & getEndpoints();
 private:
-	bool fastMode();
 	void purgeAvgStack();
-	void fastRecalcAvg();
-	void slowRecalcAvg();
 	void updateCountersForPacket( TCPCapture &p );
 
 	unsigned long finack_from_dst;
@@ -139,25 +127,17 @@ private:
 	int state;
 
 	time_t last_pkt_ts;
+
 	int packet_count;
 
-	long payload_byte_count;
+	long total_byte_count;
 
 	bool activity_toggle;
 
 	list<struct avgstat> avgstack;	
-	unsigned int fm_bps; // bytes per second
-	unsigned int fm_pps; // packets per second
+	int avg_bps; // bytes per second
 
-	// per-second stats
-	time_t this_second;
-	unsigned int packets_this_second;
-	unsigned int payload_bytes_this_second; // payload only
-	unsigned int all_bytes_this_second; // ip hdr + tcp hdr + payload
-	unsigned int packets_last_second;
-	unsigned int payload_bytes_last_second; // payload only
-	unsigned int all_bytes_last_second; // ip hdr + tcp hdr + payload
-
+	unsigned int total_bytes_this_interval;
 };
 
 #endif

@@ -46,7 +46,6 @@ struct config
 	char *iface; // interface to listen on
 	char *fexp;  // filter expression
 	unsigned int remto; // timeout to remove closed connections (secs)
-	bool fastmode; // faster average recalculation (more than once/sec).
 	bool detect; // detect pre-existing connections?
 	bool promisc; // enable promisc mode?	        
 	char *test_file; // File to use as input data for a test
@@ -54,7 +53,7 @@ struct config
 
 struct avgstat
 {
-	struct timeval ts;
+	uint64_t ts;    // timestamp in microseconds
 	unsigned int size;
 };
 

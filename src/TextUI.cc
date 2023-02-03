@@ -54,7 +54,7 @@ void TextUI::init()
 	// TODO: make these exceptions more specific & meaningful.
 	//
 
-	WINDOW *w=initscr();
+	w=initscr();
 	if( w==NULL )
 		throw GenericError("Unable to initialize ncurses display: initscr returned NULL.");
 
@@ -62,11 +62,11 @@ void TextUI::init()
 	int x,y;
 	getmaxyx(w,y,x); // this is an ncurses macro
 
-	if( x<80 ) 
-		throw GenericError("tcptrack requires a screen at least 80 columns wide to run.");
+	if( x<69 )
+		throw GenericError("tcptrack requires a screen at least 69 columns wide to run.");
 
-	if( y<3 )
-		throw GenericError("tcptrack requires a screen at least 3 rows tall to run.");
+	if( y<4 )
+		throw GenericError("tcptrack requires a screen at least 4 rows tall to run.");
 
 	size_x=x;
 	size_y=y;
@@ -123,15 +123,23 @@ void TextUI::displayer_run()
 	fd_set fdset;
 	struct timeval tv;
 	int rv;
+        struct timeval now;
+
+        uint64_t tmp1;
+        uint32_t tmp2;
 
 	iter=container->getSortedIteratorPtr();
 
 	while( state==USTATE_RUNNING || state==USTATE_IDLE )
 	{
+                gettimeofday(&now,NULL);
+                tmp1 = now.tv_sec * 1000000 + now.tv_usec;
+                tmp2 = app->refresh_intvl - (tmp1 % app->refresh_intvl);
+
 		FD_ZERO(&fdset);
 		FD_SET(0,&fdset);
-		tv.tv_sec=0;
-		tv.tv_usec=100;
+		tv.tv_sec=tmp2 / 1000000;
+		tv.tv_usec=tmp2 % 1000000;
 
 		rv=select(1,&fdset,NULL,NULL,&tv);
 		if( rv )
@@ -142,10 +150,34 @@ void TextUI::displayer_run()
 				++doffset;
 				// this is checked for sanity later
 			}
+			else if( c==KEY_NPAGE )
+			{
+				doffset += (size_y - 4);
+				// this is checked for sanity later
+			}
 			else if( c==KEY_UP ) 
 			{
 				if( doffset>0 )
 					--doffset;
+			}
+			else if( c==KEY_PPAGE )
+			{
+				if( (int)doffset > (size_y - 4))
+                                        doffset -= (size_y - 4);
+                                else
+                                        doffset = 0;
+			}
+			else if( c=='+' )
+			{
+				app->refresh_intvl /= 2;
+                                if (app->refresh_intvl < 31250)
+                                        app->refresh_intvl = 31250;
+			}
+			else if( c=='-' )
+			{
+				app->refresh_intvl *= 2;
+                                if (app->refresh_intvl > 32000000)
+                                        app->refresh_intvl = 32000000;
 			}
 			else if( c=='q' )
 			{
@@ -184,8 +216,7 @@ void TextUI::displayer_run()
 					container->purge(false);
 				}
 			}
-		}
-
+                }
 
 		container->lock();
 
@@ -229,24 +260,67 @@ void TextUI::drawui()
 {
 	int row=1;
 
+        int c_client = 1;
+        int c_client_l = 21;
+        int c_server = c_client + c_client_l + 1;
+        int c_server_l = 21;
+        int c_state = c_server + c_server_l + 1;
+        int c_state_l = 7;
+        int c_idle = c_state + c_state_l + 1;
+        int c_idle_l = 4;
+        int c_act = c_idle + c_idle_l + 1;
+        int c_act_l = 1;
+        int c_speed = c_act + c_act_l + 1;
+        int c_speed_l = 8;
+        int c_bytes = c_speed + c_speed_l + 1;
+        int c_bytes_l = 8;
+
+	int x,y;
+	getmaxyx(w,y,x); // this is an ncurses macro
+
+        if ((x != size_x) || (y != size_y))
+        {
+                if( x<69 )
+                {
+                        endwin();
+                        throw GenericError("tcptrack requires a screen at least 69 columns wide to run.");
+                }
+
+                if( y<4 )
+                {
+                        endwin();
+                        throw GenericError("tcptrack requires a screen at least 4 rows tall to run.");
+                }
+
+                size_x = x;
+                size_y = y;
+
+                bottom = y;
+        }
+
 	erase();
 
 	attron(A_REVERSE);
 	move(0,0);
-	printw("                                                                               ");
+	printw("%*.*s", size_x, size_x, " ");
 
-	move(0,1);
+	move(0,c_client);
 	printw("Client");
-	move(0,23);
+	move(0,c_server);
 	printw("Server");
-	move(0,45);
-	printw("State");
-	move(0,58);
+	move(0,c_state);
+	printw("%-*.*s", c_state_l, c_state_l, "State");
+	move(0,c_idle);
 	printw("Idle");
-	move(0,63);
+	move(0,c_act);
 	printw("A");
-	move(0,65);
+	move(0,c_speed);
 	printw("Speed");
+        if (size_x >= c_bytes + c_bytes_l)
+        {
+                move(0,c_bytes);
+                printw("%-*.*s", c_bytes_l, c_bytes_l, "Bytes");
+        }
 
 	attroff(A_REVERSE);
 
@@ -259,8 +333,13 @@ void TextUI::drawui()
 	i->rewind();
 
 	int Bps_total=0; // the total speed
+	int Byt_total=0; // the total bytes
 	while( TCPConnection *ic=i->getNext() )
-		Bps_total+=ic->getPayloadBytesPerSecond();		
+        {
+                ic->recalcAvg();
+		Bps_total+=ic->getAllBytesPerSecond();
+                Byt_total+=ic->getTotalByteCount();
+        }
 
 	i->rewind();
 
@@ -285,48 +364,55 @@ void TextUI::drawui()
 			continue;
 		}
 
-		move(row,1);
-		printw("%s:%d", ic->srcAddr().ptr(), ic->srcPort() );
+		move(row,c_client);
+		printw("%-15s %5d", ic->srcAddr().ptr(), ic->srcPort() );
 		if( ic->srcAddr().GetType() == 6 )
 			row++;
-		move(row,23);
-		printw("%s:%d", ic->dstAddr().ptr(), ic->dstPort());
+		move(row,c_server);
+		printw("%-15s %5d", ic->dstAddr().ptr(), ic->dstPort());
 		if( ic->srcAddr().GetType() == 6 )
 			row--; 
 
-		move(row,45);
+		move(row,c_state);
 		printw("             ");
-		move(row,45);
+		move(row,c_state);
 		if( ic->getState() == TCP_STATE_SYN_SYNACK )
-			printw("SYN_SENT");
+			printw("%-*.*s", c_state_l, c_state_l, "SYN_SNT");
 		else if( ic->getState() == TCP_STATE_SYNACK_ACK )
-			printw("SYN|ACK-ACK");
+			printw("%-*.*s", c_state_l, c_state_l, "SYNAKAK");
 		else if( ic->getState() == TCP_STATE_UP )
-			printw("ESTABLISHED");
+			printw("%-*.*s", c_state_l, c_state_l, "ESTABLI");
 		else if( ic->getState() == TCP_STATE_FIN_FINACK )
-			printw("CLOSING");
+			printw("%-*.*s", c_state_l, c_state_l, "CLOSING");
 		else if( ic->getState() == TCP_STATE_CLOSED )
-			printw("CLOSED");
+			printw("%-*.*s", c_state_l, c_state_l, "CLOSED");
 		else if( ic->getState() == TCP_STATE_RESET )
-			printw("RESET");
+			printw("%-*.*s", c_state_l, c_state_l, "RESET");
 
-		move(row,58);
+		move(row,c_idle);
 		if( ic->getIdleSeconds() < 60 )
-			printw("%ds",ic->getIdleSeconds());
+			printw("%2ds",(int)ic->getIdleSeconds());
 		else if( ic->getIdleSeconds() < 3600 ) 
-			printw("%dm",ic->getIdleSeconds()/60);
+			printw("%2dm",(int)(ic->getIdleSeconds()/60));
 		else
-			printw("%dh",ic->getIdleSeconds()/3600);
+			printw("%2dh",(int)(ic->getIdleSeconds()/3600));
 
-		move(row,63);
+		move(row,c_act);
 		if( ic->activityToggle() )
 			printw("*");
 		else
 			printw(" ");
 
-		move(row,65);
-		unsigned int Bps = ic->getPayloadBytesPerSecond();
+		move(row,c_speed);
+		unsigned int Bps = ic->getAllBytesPerSecond();
 		print_bps(Bps);
+
+                if (size_x >= c_bytes + c_bytes_l)
+                {
+                        move(row,c_bytes);
+                        unsigned int Bytes = ic->getTotalByteCount();
+                        print_bps(Bytes);
+                }
 
 		if( ic->srcAddr().GetType() == 6 )
 			row++;
@@ -336,14 +422,23 @@ void TextUI::drawui()
 	attron(A_REVERSE);
 
 	move(bottom-2,0);
-	printw("                                                                               ");
+	printw("%*.*s", size_x, size_x, " ");
+
 	move(bottom-2,1);
+	printw("Refresh %5.3f sec", app->refresh_intvl/1000000.0);
+
+	move(bottom-2,c_speed-6);
 	printw("TOTAL");
-	move(bottom-2,65);
+	move(bottom-2,c_speed);
 	print_bps(Bps_total);
+        if (size_x >= c_bytes + c_bytes_l)
+        {
+                move(bottom-2,c_bytes);
+                print_bps(Byt_total);
+        }
 
 	move(bottom-1,0);
-	printw("                                                                               ");
+	printw("%*.*s", size_x, size_x, " ");
 
 	move(bottom-1,1);
 	if( container->numConnections() > 0 )
@@ -391,7 +486,7 @@ void TextUI::drawui()
 			attroff(A_UNDERLINE);
 			printw("orted by bytes");
 			break;
-       case SORT_IDLE:
+		case SORT_IDLE:
 			attron(A_UNDERLINE);
 			printw("S");
 			attroff(A_UNDERLINE);
@@ -400,20 +495,29 @@ void TextUI::drawui()
 	}
 
 	attroff(A_REVERSE);
+	move(size_y-1, size_x-1);
 	refresh();
 }
 
 // display the speed with the right format
-void TextUI::print_bps(int Bps)
+void TextUI::print_bps(unsigned int Bps)
 {
-	if( Bps < 1024 )
-		printw("%d B/s",Bps);
-	else if(Bps < 1024*1024 )
-		printw("%d KB/s",Bps/1024);
-	else if(Bps < 1024*1024*1024 )
-		printw("%d MB/s",Bps/(1024*1024));
+	if( Bps < 1000 )
+		printw(" %4d  B",Bps);
+	else if(Bps < 1024*10 )
+		printw(" %4.2f kB",Bps/1024.0);
+	else if(Bps < 1024*100 )
+		printw(" %4.1f kB",Bps/1024.0);
+	else if(Bps < 1024*1000 )
+		printw(" %4.0f kB",Bps/1024.0);
+	else if(Bps < 1024*1024*10 )
+		printw("%4.2f  MB",Bps/(1024*1024.0));
+	else if(Bps < 1024*1024*100 )
+		printw("%4.1f  MB",Bps/(1024*1024.0));
+	else if(Bps < 1024*1024*1000 )
+		printw("%4.0f  MB",Bps/(1024*1024.0));
 	else
-		printw("%d GB/s",Bps/(1024*1024*1024));
+		printw("%4.2f  GB",Bps/(1024*1024*1024.0));
 }
 
 // reset the terminal. used only for unclean exits.
@@ -427,6 +531,13 @@ void TextUI::reset()
 void *displayer_thread_func( void *arg )
 {
 	TextUI *ui = (TextUI *) arg;
-	ui->displayer_run();
+        try
+        {
+                ui->displayer_run();
+        }
+        catch( const AppError &e )
+        {
+                app->fatal(e.msg());
+        }
 	return NULL;
 }

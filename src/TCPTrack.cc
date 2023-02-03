@@ -19,7 +19,7 @@ TCPTrack::TCPTrack()
 {
 	ferr="";
 	remto=2;
-	fastmode=false;
+        refresh_intvl=1000000;
 	pthread_mutex_init( &ferr_lock, NULL );
 }
 
@@ -28,7 +28,6 @@ void TCPTrack::run( int argc, char **argv )
 	struct config cf = parseopts(argc,argv);
 
 	remto=cf.remto;
-	fastmode=cf.fastmode;
 	detect=cf.detect;
 	promisc=cf.promisc;
 
@@ -76,8 +75,10 @@ void TCPTrack::run( int argc, char **argv )
 		// detach the objects from each other.
 		// other threads may be running after a delete and may follow a
 		// bad pointer to a just deleted object otherwise.
+		ui->stop();
 		s->dest();
 		pb->dest();
+		c->stop();
 		
 		delete ui;
 		delete s;
@@ -109,7 +110,7 @@ void TCPTrack::fatal( string msg )
 	if( ferr != "" )
 	{
 		// there can be only one fatal error at once
-		assert( pthread_mutex_unlock(&ferr_lock) );
+		assert( pthread_mutex_unlock(&ferr_lock) == 0 );
 		return;
 	}
 
@@ -128,7 +129,6 @@ struct config parseopts(int argc, char **argv)
 	int o;
 	struct config cf;
 	cf.remto=CLOSED_PURGE;
-	cf.fastmode=false;
 	cf.promisc=true;
 	cf.detect=true;
 	cf.test_file=NULL;
@@ -154,8 +154,6 @@ struct config parseopts(int argc, char **argv)
 		}
 		if( o=='r' )
 			cf.remto = atoi(optarg);
-		if( o=='f' )
-			cf.fastmode=true;
 		if( o=='d' )
 			cf.detect=false;
 		if( o=='p' ) 

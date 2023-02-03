@@ -90,9 +90,9 @@ int compare_rate(const void *c1, const void *c2)
 	con2=* (TCPConnection **) c2;
 
 
-	if( con1->getPayloadBytesPerSecond() > con2->getPayloadBytesPerSecond() ) 
+	if( con1->getAllBytesPerSecond() > con2->getAllBytesPerSecond() )
 		return -1;
-	else if( con1->getPayloadBytesPerSecond() < con2->getPayloadBytesPerSecond() )
+	else if( con1->getAllBytesPerSecond() < con2->getAllBytesPerSecond() )
 		return 1;
 	else
 	{
@@ -116,9 +116,9 @@ int compare_bytes(const void *c1, const void *c2)
 	con2=* (TCPConnection **) c2;
 
 
-	if( con1->getPayloadByteCount() > con2->getPayloadByteCount() ) 
+	if( con1->getTotalByteCount() > con2->getTotalByteCount() )
 		return -1;
-	else if( con1->getPayloadByteCount() < con2->getPayloadByteCount() )
+	else if( con1->getTotalByteCount() < con2->getTotalByteCount() )
 		return 1;
 	else
 	{

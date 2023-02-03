@@ -47,11 +47,6 @@ TCPConnection::~TCPConnection()
 	delete endpts;
 }
 
-bool TCPConnection::fastMode()
-{
-	return app->fastmode;
-}
-
 bool TCPConnection::isFinished()
 {
 	if( state == TCP_STATE_CLOSED || state == TCP_STATE_RESET )
@@ -84,9 +79,9 @@ int TCPConnection::getPacketCount()
 	return packet_count;
 }
 
-long TCPConnection::getPayloadByteCount()
+long TCPConnection::getTotalByteCount()
 {
-	return payload_byte_count;
+	return total_byte_count;
 }
 
 int TCPConnection::getState()
@@ -108,29 +103,14 @@ TCPConnection::TCPConnection( TCPCapture &p )
 		state = TCP_STATE_UP;
 
 	// init per-second stats counters
-	this_second = time(0);
-	packets_this_second = 1;
-
-	payload_bytes_this_second = p.GetPacket().payloadLen()-p.GetPacket().tcp().headerLen();
-	all_bytes_this_second = p.GetPacket().totalLen();
-	payload_bytes_last_second = 0;
-	all_bytes_last_second = 0;
-
-	payload_byte_count = p.GetPacket().payloadLen() - p.GetPacket().tcp().headerLen();
-
 	last_pkt_ts = time(NULL);
-	activity_toggle=false;
+	activity_toggle=true;
 
-	/*
-		 if( fastMode() )
-		 {
-		 struct avgstat s;
-		 s.ts = p->pcap.ts;
-		 s.size = ntohs(p->ip->ip_len)-(IP_HEADER_LEN+TCP_HEADER_LEN);
-		 avgstack.push_front(s);
-		 }
-		 */
-	fm_bps=0;
+        //payload_byte_count = p.GetPacket().payloadLen()-p.GetPacket().tcp().headerLen();
+        total_byte_count = p.GetPacket().totalLen();
+        total_bytes_this_interval = p.GetPacket().totalLen();
+
+	avg_bps=0;
 
 	finack_from_dst=0;
 	finack_from_src=0;
@@ -138,18 +118,24 @@ TCPConnection::TCPConnection( TCPCapture &p )
 	recvd_finack_from_dst=false;
 
 	endpts = new SocketPair( *srcaddr, srcport, *dstaddr, dstport);
+
+        // TODO start thread to resolve addresses
 }
 
 void TCPConnection::purgeAvgStack()
 {
 	struct timeval now;
 	gettimeofday(&now,NULL);
+
+        // Keep 3 seconds of statistics
+        uint64_t limit;
+        limit = now.tv_sec * 1000000 + now.tv_usec;
+        limit -= 3 * 1000000;
+
 	list<struct avgstat>::iterator i;
 	for( i=avgstack.begin(); i!=avgstack.end(); i++ )
 	{
-		struct avgstat cur = *i;
-		struct timeval top = cur.ts;
-		if( top.tv_sec <= now.tv_sec-2 )
+		if( i->ts <= limit )
 		{
 			avgstack.erase(i,avgstack.end());
 			break;
@@ -157,59 +143,48 @@ void TCPConnection::purgeAvgStack()
 	}
 }
 
-void TCPConnection::fastRecalcAvg()
+// updates the byte counters
+// must be called once per UI refresh interval
+void TCPConnection::updateCounters()
 {
+	purgeAvgStack();
+
 	struct timeval now;
 	gettimeofday(&now,NULL);
-	unsigned int bytes_past_second=0;
-	unsigned int packets_past_second=0;
-	purgeAvgStack();
+
+        struct avgstat s;
+        s.ts = now.tv_sec * 1000000 + now.tv_usec;
+        s.size = total_bytes_this_interval;
+        avgstack.push_front(s);
+
+        total_bytes_this_interval = 0;
+}
+
+// recalculate packets/bytes per second counters
+void TCPConnection::recalcAvg()
+{
+        unsigned int total_bytes = 0;
+        uint64_t time1 = 0;
+        uint64_t time2 = 0;
 
 	list<struct avgstat>::iterator i;
 	for( i=avgstack.begin(); i!=avgstack.end(); i++ )
 	{
-		struct avgstat cur = *i;
-		struct timeval top = cur.ts;
-		if( top.tv_sec == now.tv_sec )
-			if( top.tv_usec <= now.tv_usec )
-			{
-				bytes_past_second += cur.size;
-				packets_past_second++;
-			}
-		if( top.tv_sec == now.tv_sec-1 )
-			if( top.tv_usec >= now.tv_usec )
-			{
-				bytes_past_second += cur.size;
-				packets_past_second++;
-			}
+                total_bytes += i->size;
+                time1 = i->ts;
+                if (time2 == 0)
+                        time2 = i->ts;
 	}
-	fm_bps=bytes_past_second; 
-	fm_pps=packets_past_second;
-}
 
-void TCPConnection::slowRecalcAvg()
-{
-	if( this_second != time(0) )
-	{
-		packets_last_second = packets_this_second;
-		payload_bytes_last_second = payload_bytes_this_second;
-		all_bytes_last_second = all_bytes_this_second;
-
-		this_second = time(0);
-		packets_this_second = 0;
-		payload_bytes_this_second = 0;
-		all_bytes_this_second = 0;
-	}
-}
-
-// recalculate packets/bytes per second counters
-// should be called once per second
-void TCPConnection::recalcAvg()
-{
-	if( fastMode() )
-		fastRecalcAvg();
-	else
-		slowRecalcAvg();
+        uint64_t time_interval = time2 - time1 + app->refresh_intvl;
+        if (time_interval > 0)
+        {
+                avg_bps = total_bytes / (time_interval / 1000000.0);
+        }
+        else
+        {
+                avg_bps = 0;
+        }
 }
 
 time_t TCPConnection::getLastPktTimestamp()
@@ -236,35 +211,9 @@ time_t TCPConnection::getIdleSeconds()
 
 void TCPConnection::updateCountersForPacket( TCPCapture &p )
 {
-	if( fastMode() )
-	{
-		struct avgstat s;
-		s.ts = p.timestamp();
-		s.size = p.GetPacket().payloadLen() - p.GetPacket().tcp().headerLen();
-		avgstack.push_front(s);
-	}
-	else 
-	{
-		if( this_second != time(0) )
-		{
-			packets_last_second = packets_this_second;
-			payload_bytes_last_second = payload_bytes_this_second;
-			all_bytes_last_second = all_bytes_this_second;
-
-			this_second = time(0);
-			packets_this_second = 1;
-			payload_bytes_this_second = p.GetPacket().payloadLen() - p.GetPacket().tcp().headerLen();
-			all_bytes_this_second = p.GetPacket().totalLen();
-		}
-		else
-		{
-			packets_this_second++;
-			payload_bytes_this_second += p.GetPacket().payloadLen() - p.GetPacket().tcp().headerLen();
-			all_bytes_this_second += p.GetPacket().totalLen();
-		}
-
-		payload_byte_count += p.GetPacket().payloadLen() - p.GetPacket().tcp().headerLen();
-	}
+        //payload_bytes = p.GetPacket().payloadLen() - p.GetPacket().tcp().headerLen();
+        total_bytes_this_interval += p.GetPacket().totalLen();
+        total_byte_count += p.GetPacket().totalLen();
 }
 
 bool TCPConnection::acceptPacket( TCPCapture &cap )
@@ -347,32 +296,9 @@ bool TCPConnection::acceptPacket( TCPCapture &cap )
 	return false;
 }
 
-int TCPConnection::getPacketsPerSecond()
-{
-	if( fastMode() ) 
-		return fm_pps;
-	else 
-		return packets_last_second;
-}
-
-unsigned int TCPConnection::getPayloadBytesPerSecond()
-{
-	if( fastMode() )
-		return fm_bps;
-	else
-		return payload_bytes_last_second;
-}
-
 int TCPConnection::getAllBytesPerSecond()
 {
-	if( fastMode() ) 
-	{
-		// TODO: at some point when this handles ipv6, this alg will
-		// have to be changed.
-		return fm_pps*(IP_HEADER_LEN+TCP_HEADER_LEN)+fm_bps;
-	}
-	else
-		return all_bytes_last_second;
+        return avg_bps;
 }
 
 // this implements an activity "light" for this connection... should work

@@ -52,7 +52,7 @@ public:
 	void displayer_run();
 private:
 	void drawui(); // draw the screen.
-	void print_bps(int); // display the speed with the right format
+	void print_bps(unsigned int); // display the speed with the right format
 
 	bool run_displayer;
 
@@ -62,6 +62,7 @@ private:
 	// an iterator over connections in the container.
 	SortedIterator * iter;
 
+        WINDOW *w;
 	// number of the last line on the screen.
 	int bottom;
 	// size of the terminal

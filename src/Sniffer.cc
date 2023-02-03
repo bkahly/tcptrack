@@ -68,9 +68,9 @@ void Sniffer::init(char *iface, char *fexp, char *test_file)
 	if( test_file == NULL )
 	{
 		if( app->promisc )
-			handle = pcap_open_live(iface, SNAPLEN, 1, POL_TO_MS, errbuf);
+			handle = pcap_open_live(iface, SNAPLEN, 1, PCAP_DELAY*1000, errbuf);
 		else
-			handle = pcap_open_live(iface, SNAPLEN, 0, POL_TO_MS, errbuf);
+			handle = pcap_open_live(iface, SNAPLEN, 0, PCAP_DELAY*1000, errbuf);
 	}
 	else
 	{

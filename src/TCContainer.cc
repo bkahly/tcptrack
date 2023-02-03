@@ -157,32 +157,28 @@ unsigned int TCContainer::numConnections()
 	return conhash2.size();
 }
 
-// the maintenence thread recalculates averages and stuff.
+// the maintenence thread updates statistics and cleans up expired connections
 void TCContainer::maint_thread_run()
 {
 	while( state==TSTATE_RUNNING || state==TSTATE_IDLE )
 	{
+                struct timeval now;
+                gettimeofday(&now,NULL);
+                uint64_t tmp1 = now.tv_sec * 1000000 + now.tv_usec;
+                uint32_t tmp2 = app->refresh_intvl - (tmp1 % app->refresh_intvl);
+
 		struct timespec ts;
-		if( app->fastmode )
-		{
-			ts.tv_sec=0;
-			ts.tv_nsec=FASTMODE_INTERVAL;
-		}
-		else
-		{
-			ts.tv_sec=1;
-			ts.tv_nsec=0;
-		}
+                ts.tv_sec=tmp2 / 1000000;
+                ts.tv_nsec= (tmp2 % 1000000) * 1000;
+
 		nanosleep(&ts,NULL);
 
 		lock();
 
-		int numitems = 0;
 		for( tccmap::iterator i=conhash2.begin(); i!=conhash2.end(); )
 		{
 			TCPConnection *ic=(*i).second;
-			numitems++;
-			ic->recalcAvg();
+                        ic->updateCounters();
 
 			// remove closed or stale connections.
 			if( purgeflag==true )
@@ -214,7 +210,16 @@ void TCContainer::maint_thread_run()
 
 void TCContainer::lock()
 {
-	pthread_mutex_lock(&conlist_lock);
+        // If we can't get the lock in a few seconds, something is wrong.
+        struct timespec timeout;
+        clock_gettime(CLOCK_REALTIME, &timeout);
+        timeout.tv_sec += 2;
+
+	if ( pthread_mutex_timedlock(&conlist_lock, &timeout) != 0 )
+        {
+		throw GenericError("pthread_mutex_timedlock() failed");
+        }
+        // TODO -- replace all pthread_mutex_lock() with this.
 }
 
 void TCContainer::unlock()
@@ -228,7 +233,14 @@ void TCContainer::unlock()
 void *maint_thread_func( void * arg )
 {
 	TCContainer *c = (TCContainer *) arg;
-	c->maint_thread_run();
+        try
+        {
+                c->maint_thread_run();
+        }
+        catch( const AppError &e )
+        {
+                app->fatal(e.msg());
+        }
 	return NULL;
 }
 
