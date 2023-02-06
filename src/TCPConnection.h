@@ -1,5 +1,5 @@
-/* 
- *  Ths code in this file is part of tcptrack. For more information see
+/*
+ *  The code in this file is part of tcptrack. For more information see
  *    http://www.rhythm.cx/~steve/devel/tcptrack
  *
  *     Copyright (C) Steve Benson - 2003
@@ -8,16 +8,16 @@
  *  under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your
  *  option) any later version.
- *   
+ *
  *  tcptrack is distributed in the hope that it will be useful, but
  *  WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
- *  
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ *
  */
 #ifndef TCPCONNECTION_H
 #define TCPCONNECTION_H 1
@@ -54,8 +54,8 @@ public:
 	// connection.
 	bool match(IPAddress &sa, IPAddress &da, portnum_t sp, portnum_t dp);
 
-	// see if packet p is relevant to this connection. 
-	// if it is, true will be returned and this object's internal 
+	// see if packet p is relevant to this connection.
+	// if it is, true will be returned and this object's internal
 	// state will be changed to reflect the new packet.
 	bool acceptPacket( TCPCapture &p );
 
@@ -66,9 +66,9 @@ public:
 	IPAddress & dstAddr();
 	portnum_t dstPort();
 
-        // TODO Store hostnames
-        //char *dstHost();
-        //char *srcHost();
+	// TODO Store hostnames
+	//char *dstHost();
+	//char *srcHost();
 
 	// returns one of the TCP_STATE_* values reflecting the connection's
 	// state.
@@ -81,11 +81,11 @@ public:
 	// timestamp of last packet sent either way
 	time_t getLastPktTimestamp();
 	// number of seconds since last packet sent either way
-	time_t getIdleSeconds(); 
+	time_t getIdleSeconds();
 
 	// called to perform internal updates to counters and stuff.
 	// should be called exactly once per refresh interval.
-        void updateCounters();
+	void updateCounters();
 
 	// called to recalculate averages
 	void recalcAvg();

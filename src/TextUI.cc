@@ -1,5 +1,5 @@
-/* 
- *  Ths code in this file is part of tcptrack. For more information see
+/*
+ *  The code in this file is part of tcptrack. For more information see
  *    http://www.rhythm.cx/~steve/devel/tcptrack
  *
  *     Copyright (C) Steve Benson - 2003
@@ -8,16 +8,16 @@
  *  under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your
  *  option) any later version.
- *   
+ *
  *  tcptrack is distributed in the hope that it will be useful, but
  *  WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
- *  
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ *
  */
 #include "TextUI.h"
 #include <stdio.h>
@@ -30,7 +30,7 @@
 #include "TCPTrack.h"
 #include "GenericError.h"
 
-extern TCPTrack *app; 
+extern TCPTrack *app;
 
 TextUI::TextUI( TCContainer *c )
 {
@@ -73,7 +73,7 @@ void TextUI::init()
 	bottom=y;
 
 
-	// 
+	//
 	// Set up and run the displayer thread.
 	//
 
@@ -95,7 +95,7 @@ void TextUI::init()
 void TextUI::stop()
 {
 	pthread_mutex_lock(&state_mutex);
-	if( state != USTATE_RUNNING ) 
+	if( state != USTATE_RUNNING )
 	{
 		pthread_mutex_unlock(&state_mutex);
 		return;
@@ -103,7 +103,7 @@ void TextUI::stop()
 	state=USTATE_STOPPING;
 	pthread_mutex_unlock(&state_mutex);	
 
-	// now that state is set to USTATE_STOPPING, 
+	// now that state is set to USTATE_STOPPING,
 	// the display draw loop will see this and exit. just wait for it.
 	pthread_join(displayer_tid,NULL);
 
@@ -123,18 +123,18 @@ void TextUI::displayer_run()
 	fd_set fdset;
 	struct timeval tv;
 	int rv;
-        struct timeval now;
+	struct timeval now;
 
-        uint64_t tmp1;
-        uint32_t tmp2;
+	uint64_t tmp1;
+	uint32_t tmp2;
 
 	iter=container->getSortedIteratorPtr();
 
 	while( state==USTATE_RUNNING || state==USTATE_IDLE )
 	{
-                gettimeofday(&now,NULL);
-                tmp1 = now.tv_sec * 1000000 + now.tv_usec;
-                tmp2 = app->refresh_intvl - (tmp1 % app->refresh_intvl);
+		gettimeofday(&now,NULL);
+		tmp1 = now.tv_sec * 1000000 + now.tv_usec;
+		tmp2 = app->refresh_intvl - (tmp1 % app->refresh_intvl);
 
 		FD_ZERO(&fdset);
 		FD_SET(0,&fdset);
@@ -145,7 +145,7 @@ void TextUI::displayer_run()
 		if( rv )
 		{
 			int c = getch();
-			if( c==KEY_DOWN ) 
+			if( c==KEY_DOWN )
 			{
 				++doffset;
 				// this is checked for sanity later
@@ -155,7 +155,7 @@ void TextUI::displayer_run()
 				doffset += (size_y - 4);
 				// this is checked for sanity later
 			}
-			else if( c==KEY_UP ) 
+			else if( c==KEY_UP )
 			{
 				if( doffset>0 )
 					--doffset;
@@ -163,21 +163,21 @@ void TextUI::displayer_run()
 			else if( c==KEY_PPAGE )
 			{
 				if( (int)doffset > (size_y - 4))
-                                        doffset -= (size_y - 4);
-                                else
-                                        doffset = 0;
+					doffset -= (size_y - 4);
+				else
+					doffset = 0;
 			}
 			else if( c=='+' )
 			{
 				app->refresh_intvl /= 2;
-                                if (app->refresh_intvl < 31250)
-                                        app->refresh_intvl = 31250;
+				if (app->refresh_intvl < 31250)
+					app->refresh_intvl = 31250;
 			}
 			else if( c=='-' )
 			{
 				app->refresh_intvl *= 2;
-                                if (app->refresh_intvl > 32000000)
-                                        app->refresh_intvl = 32000000;
+				if (app->refresh_intvl > 32000000)
+					app->refresh_intvl = 32000000;
 			}
 			else if( c=='q' )
 			{
@@ -203,7 +203,7 @@ void TextUI::displayer_run()
 			}
 			else if( c=='p' )
 			{
-				if( paused==true ) 
+				if( paused==true )
 				{
 					// going from paused to unpaused
 					paused=false;
@@ -216,7 +216,7 @@ void TextUI::displayer_run()
 					container->purge(false);
 				}
 			}
-                }
+		}
 
 		container->lock();
 
@@ -225,7 +225,7 @@ void TextUI::displayer_run()
 		{
 			if( container->numConnections()>0 )
 			{
-				if( doffset >= container->numConnections() ) 
+				if( doffset >= container->numConnections() )
 					doffset = container->numConnections()-1;
 			}
 			else
@@ -243,7 +243,7 @@ void TextUI::displayer_run()
 
 		if( paused==false )
 		{
-			// gonna get a new one next time if not paused... 
+			// gonna get a new one next time if not paused...
 			// so can this one.
 			delete iter;
 			iter=NULL;
@@ -260,43 +260,43 @@ void TextUI::drawui()
 {
 	int row=1;
 
-        int c_client = 1;
-        int c_client_l = 21;
-        int c_server = c_client + c_client_l + 1;
-        int c_server_l = 21;
-        int c_state = c_server + c_server_l + 1;
-        int c_state_l = 7;
-        int c_idle = c_state + c_state_l + 1;
-        int c_idle_l = 4;
-        int c_act = c_idle + c_idle_l + 1;
-        int c_act_l = 1;
-        int c_speed = c_act + c_act_l + 1;
-        int c_speed_l = 8;
-        int c_bytes = c_speed + c_speed_l + 1;
-        int c_bytes_l = 8;
+	int c_client = 1;
+	int c_client_l = 21;
+	int c_server = c_client + c_client_l + 1;
+	int c_server_l = 21;
+	int c_state = c_server + c_server_l + 1;
+	int c_state_l = 7;
+	int c_idle = c_state + c_state_l + 1;
+	int c_idle_l = 4;
+	int c_act = c_idle + c_idle_l + 1;
+	int c_act_l = 1;
+	int c_speed = c_act + c_act_l + 1;
+	int c_speed_l = 8;
+	int c_bytes = c_speed + c_speed_l + 1;
+	int c_bytes_l = 8;
 
 	int x,y;
 	getmaxyx(w,y,x); // this is an ncurses macro
 
-        if ((x != size_x) || (y != size_y))
-        {
-                if( x<69 )
-                {
-                        endwin();
-                        throw GenericError("tcptrack requires a screen at least 69 columns wide to run.");
-                }
+	if ((x != size_x) || (y != size_y))
+	{
+		if( x<69 )
+		{
+			endwin();
+			throw GenericError("tcptrack requires a screen at least 69 columns wide to run.");
+		}
 
-                if( y<4 )
-                {
-                        endwin();
-                        throw GenericError("tcptrack requires a screen at least 4 rows tall to run.");
-                }
+		if( y<4 )
+		{
+			endwin();
+			throw GenericError("tcptrack requires a screen at least 4 rows tall to run.");
+		}
 
-                size_x = x;
-                size_y = y;
+		size_x = x;
+		size_y = y;
 
-                bottom = y;
-        }
+		bottom = y;
+	}
 
 	erase();
 
@@ -316,11 +316,11 @@ void TextUI::drawui()
 	printw("A");
 	move(0,c_speed);
 	printw("Speed");
-        if (size_x >= c_bytes + c_bytes_l)
-        {
-                move(0,c_bytes);
-                printw("%-*.*s", c_bytes_l, c_bytes_l, "Bytes");
-        }
+	if (size_x >= c_bytes + c_bytes_l)
+	{
+		move(0,c_bytes);
+		printw("%-*.*s", c_bytes_l, c_bytes_l, "Bytes");
+	}
 
 	attroff(A_REVERSE);
 
@@ -335,15 +335,15 @@ void TextUI::drawui()
 	int Bps_total=0; // the total speed
 	int Byt_total=0; // the total bytes
 	while( TCPConnection *ic=i->getNext() )
-        {
-                ic->recalcAvg();
+	{
+		ic->recalcAvg();
 		Bps_total+=ic->getAllBytesPerSecond();
-                Byt_total+=ic->getTotalByteCount();
-        }
+		Byt_total+=ic->getTotalByteCount();
+	}
 
 	i->rewind();
 
-	if( sort_type != SORT_UN ) 
+	if( sort_type != SORT_UN )
 		i->sort( sort_type );
 
 	unsigned int ic_i=0; // for scrolling
@@ -371,7 +371,7 @@ void TextUI::drawui()
 		move(row,c_server);
 		printw("%-15s %5d", ic->dstAddr().ptr(), ic->dstPort());
 		if( ic->srcAddr().GetType() == 6 )
-			row--; 
+			row--;
 
 		move(row,c_state);
 		printw("             ");
@@ -392,7 +392,7 @@ void TextUI::drawui()
 		move(row,c_idle);
 		if( ic->getIdleSeconds() < 60 )
 			printw("%2ds",(int)ic->getIdleSeconds());
-		else if( ic->getIdleSeconds() < 3600 ) 
+		else if( ic->getIdleSeconds() < 3600 )
 			printw("%2dm",(int)(ic->getIdleSeconds()/60));
 		else
 			printw("%2dh",(int)(ic->getIdleSeconds()/3600));
@@ -407,12 +407,12 @@ void TextUI::drawui()
 		unsigned int Bps = ic->getAllBytesPerSecond();
 		print_bps(Bps);
 
-                if (size_x >= c_bytes + c_bytes_l)
-                {
-                        move(row,c_bytes);
-                        unsigned int Bytes = ic->getTotalByteCount();
-                        print_bps(Bytes);
-                }
+		if (size_x >= c_bytes + c_bytes_l)
+		{
+			move(row,c_bytes);
+			unsigned int Bytes = ic->getTotalByteCount();
+			print_bps(Bytes);
+		}
 
 		if( ic->srcAddr().GetType() == 6 )
 			row++;
@@ -431,11 +431,11 @@ void TextUI::drawui()
 	printw("TOTAL");
 	move(bottom-2,c_speed);
 	print_bps(Bps_total);
-        if (size_x >= c_bytes + c_bytes_l)
-        {
-                move(bottom-2,c_bytes);
-                print_bps(Byt_total);
-        }
+	if (size_x >= c_bytes + c_bytes_l)
+	{
+		move(bottom-2,c_bytes);
+		print_bps(Byt_total);
+	}
 
 	move(bottom-1,0);
 	printw("%*.*s", size_x, size_x, " ");
@@ -443,7 +443,7 @@ void TextUI::drawui()
 	move(bottom-1,1);
 	if( container->numConnections() > 0 )
 		printw("Connections %d-%d of %d",doffset+1,ic_i,container->numConnections());
-	else 
+	else
 		printw("Connections 0-0 of 0");
 
 	move(bottom-1,46);
@@ -531,13 +531,13 @@ void TextUI::reset()
 void *displayer_thread_func( void *arg )
 {
 	TextUI *ui = (TextUI *) arg;
-        try
-        {
-                ui->displayer_run();
-        }
-        catch( const AppError &e )
-        {
-                app->fatal(e.msg());
-        }
+	try
+	{
+		ui->displayer_run();
+	}
+	catch( const AppError &e )
+	{
+		app->fatal(e.msg());
+	}
 	return NULL;
 }

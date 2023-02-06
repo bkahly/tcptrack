@@ -19,7 +19,7 @@ TCPTrack::TCPTrack()
 {
 	ferr="";
 	remto=2;
-        refresh_intvl=1000000;
+	refresh_intvl=1000000;
 	pthread_mutex_init( &ferr_lock, NULL );
 }
 
@@ -36,7 +36,7 @@ void TCPTrack::run( int argc, char **argv )
 	s = new Sniffer();
 	ui = new TextUI(c);
 
-	try 
+	try
 	{
 		s->dest(pb); // sniffer, send your packets to PacketBuffer
 		pb->dest(c); // PacketBuffer, send your packets to the TCContainer
@@ -47,8 +47,8 @@ void TCPTrack::run( int argc, char **argv )
 		s->init(cf.iface,cf.fexp,cf.test_file);
 		pb->init();
 
-		// now let these objects run the application. 
-		// just sit here until someone calls shutdown(), 
+		// now let these objects run the application.
+		// just sit here until someone calls shutdown(),
 		// which sets the quitflag condition variable.
 		pthread_mutex_lock(&quitflag_mutex);
 		pthread_cond_wait(&quitflag,&quitflag_mutex);
@@ -57,7 +57,7 @@ void TCPTrack::run( int argc, char **argv )
 		// if an exception happened in another thread, it will be passed
 		// to us via the fatal() method, which puts the error in string
 		// form in this ferr variable.
-		// TODO: This ferr thing is sloppy. should pass an actual 
+		// TODO: This ferr thing is sloppy. should pass an actual
 		// exception object.
 		if( ferr != "" )
 			throw GenericError(ferr);
@@ -70,7 +70,7 @@ void TCPTrack::run( int argc, char **argv )
 		
 		delete s;
 	}
-	catch( const AppError &e ) 
+	catch( const AppError &e )
 	{
 		// detach the objects from each other.
 		// other threads may be running after a delete and may follow a
@@ -101,7 +101,7 @@ void TCPTrack::shutdown()
 	pthread_mutex_unlock(&quitflag_mutex);
 }
 
-// TODO: This ferr thing is sloppy. should pass an actual 
+// TODO: This ferr thing is sloppy. should pass an actual
 // exception object.
 void TCPTrack::fatal( string msg )
 {
@@ -156,7 +156,7 @@ struct config parseopts(int argc, char **argv)
 			cf.remto = atoi(optarg);
 		if( o=='d' )
 			cf.detect=false;
-		if( o=='p' ) 
+		if( o=='p' )
 			cf.promisc=false;
 		if( o=='T' )
 		{

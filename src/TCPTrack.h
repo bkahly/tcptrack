@@ -23,11 +23,11 @@ public:
 	time_t remto; // closed connection removal timeout
 	bool detect; // detect pre-existing connections?
 	bool promisc; // enable promisc mode?
-        unsigned int refresh_intvl; // How often are we refreshing the UI (usec)
+	unsigned int refresh_intvl; // How often are we refreshing the UI (usec)
 
 	// other threads call this when they have an unhandled exception.
 	// shuts tcptrack down abruptly and prints the error.
-	void fatal( string msg ); 
+	void fatal( string msg );
 private:
 	Sniffer *s;
 	TextUI *ui;

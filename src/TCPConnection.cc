@@ -1,5 +1,5 @@
-/* 
- *  Ths code in this file is part of tcptrack. For more information see
+/*
+ *  The code in this file is part of tcptrack. For more information see
  *    http://www.rhythm.cx/~steve/devel/tcptrack
  *
  *     Copyright (C) Steve Benson - 2003
@@ -8,16 +8,16 @@
  *  under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your
  *  option) any later version.
- *   
+ *
  *  tcptrack is distributed in the hope that it will be useful, but
  *  WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
- *  
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ *
  */
 #define _DEFAULT_SOURCE 1
 #define _BSD_SOURCE 1
@@ -89,7 +89,7 @@ int TCPConnection::getState()
 	return state;
 }
 
-TCPConnection::TCPConnection( TCPCapture &p ) 
+TCPConnection::TCPConnection( TCPCapture &p )
 {
 	srcaddr = p.GetPacket().srcAddr().Clone();
 	dstaddr = p.GetPacket().dstAddr().Clone();
@@ -106,9 +106,9 @@ TCPConnection::TCPConnection( TCPCapture &p )
 	last_pkt_ts = time(NULL);
 	activity_toggle=true;
 
-        //payload_byte_count = p.GetPacket().payloadLen()-p.GetPacket().tcp().headerLen();
-        total_byte_count = p.GetPacket().totalLen();
-        total_bytes_this_interval = p.GetPacket().totalLen();
+	//payload_byte_count = p.GetPacket().payloadLen()-p.GetPacket().tcp().headerLen();
+	total_byte_count = p.GetPacket().totalLen();
+	total_bytes_this_interval = p.GetPacket().totalLen();
 
 	avg_bps=0;
 
@@ -119,7 +119,7 @@ TCPConnection::TCPConnection( TCPCapture &p )
 
 	endpts = new SocketPair( *srcaddr, srcport, *dstaddr, dstport);
 
-        // TODO start thread to resolve addresses
+	// TODO start thread to resolve addresses
 }
 
 void TCPConnection::purgeAvgStack()
@@ -127,10 +127,10 @@ void TCPConnection::purgeAvgStack()
 	struct timeval now;
 	gettimeofday(&now,NULL);
 
-        // Keep 3 seconds of statistics
-        uint64_t limit;
-        limit = now.tv_sec * 1000000 + now.tv_usec;
-        limit -= 3 * 1000000;
+	// Keep 3 seconds of statistics
+	uint64_t limit;
+	limit = now.tv_sec * 1000000 + now.tv_usec;
+	limit -= 3 * 1000000;
 
 	list<struct avgstat>::iterator i;
 	for( i=avgstack.begin(); i!=avgstack.end(); i++ )
@@ -152,39 +152,39 @@ void TCPConnection::updateCounters()
 	struct timeval now;
 	gettimeofday(&now,NULL);
 
-        struct avgstat s;
-        s.ts = now.tv_sec * 1000000 + now.tv_usec;
-        s.size = total_bytes_this_interval;
-        avgstack.push_front(s);
+	struct avgstat s;
+	s.ts = now.tv_sec * 1000000 + now.tv_usec;
+	s.size = total_bytes_this_interval;
+	avgstack.push_front(s);
 
-        total_bytes_this_interval = 0;
+	total_bytes_this_interval = 0;
 }
 
 // recalculate packets/bytes per second counters
 void TCPConnection::recalcAvg()
 {
-        unsigned int total_bytes = 0;
-        uint64_t time1 = 0;
-        uint64_t time2 = 0;
+	unsigned int total_bytes = 0;
+	uint64_t time1 = 0;
+	uint64_t time2 = 0;
 
 	list<struct avgstat>::iterator i;
 	for( i=avgstack.begin(); i!=avgstack.end(); i++ )
 	{
-                total_bytes += i->size;
-                time1 = i->ts;
-                if (time2 == 0)
-                        time2 = i->ts;
+		total_bytes += i->size;
+		time1 = i->ts;
+		if (time2 == 0)
+			time2 = i->ts;
 	}
 
-        uint64_t time_interval = time2 - time1 + app->refresh_intvl;
-        if (time_interval > 0)
-        {
-                avg_bps = total_bytes / (time_interval / 1000000.0);
-        }
-        else
-        {
-                avg_bps = 0;
-        }
+	uint64_t time_interval = time2 - time1 + app->refresh_intvl;
+	if (time_interval > 0)
+	{
+		avg_bps = total_bytes / (time_interval / 1000000.0);
+	}
+	else
+	{
+		avg_bps = 0;
+	}
 }
 
 time_t TCPConnection::getLastPktTimestamp()
@@ -194,7 +194,7 @@ time_t TCPConnection::getLastPktTimestamp()
 
 bool TCPConnection::match( IPAddress &sa, IPAddress &da, portnum_t sp, portnum_t dp )
 {
-	if( ! (*srcaddr == sa) ) 
+	if( ! (*srcaddr == sa) )
 		return false;
 	if( !( *dstaddr == da) )
 		return false;
@@ -211,9 +211,9 @@ time_t TCPConnection::getIdleSeconds()
 
 void TCPConnection::updateCountersForPacket( TCPCapture &p )
 {
-        //payload_bytes = p.GetPacket().payloadLen() - p.GetPacket().tcp().headerLen();
-        total_bytes_this_interval += p.GetPacket().totalLen();
-        total_byte_count += p.GetPacket().totalLen();
+	//payload_bytes = p.GetPacket().payloadLen() - p.GetPacket().tcp().headerLen();
+	total_bytes_this_interval += p.GetPacket().totalLen();
+	total_byte_count += p.GetPacket().totalLen();
 }
 
 bool TCPConnection::acceptPacket( TCPCapture &cap )
@@ -221,11 +221,11 @@ bool TCPConnection::acceptPacket( TCPCapture &cap )
 	TCPPacket *p = &(cap.GetPacket());
 	unsigned int payloadlen = p->payloadLen() - p->tcp().headerLen();
 
-	if( state == TCP_STATE_CLOSED ) 
+	if( state == TCP_STATE_CLOSED )
 		return false;
 
 
-	if(  match(p->srcAddr(), p->dstAddr(), p->tcp().srcPort(), p->tcp().dstPort()) 
+	if(  match(p->srcAddr(), p->dstAddr(), p->tcp().srcPort(), p->tcp().dstPort())
 			|| match(p->dstAddr(), p->srcAddr(), p->tcp().dstPort(), p->tcp().srcPort()) )
 	{
 		++packet_count;
@@ -238,7 +238,7 @@ bool TCPConnection::acceptPacket( TCPCapture &cap )
 		{
 			// if this is a fin going from cli->srv
 			// expect an appropriate ack from server
-			if( p->srcAddr() == *srcaddr ) 
+			if( p->srcAddr() == *srcaddr )
 			{
 				if( payloadlen==0 )
 					finack_from_dst = p->tcp().getSeq()+1;
@@ -246,7 +246,7 @@ bool TCPConnection::acceptPacket( TCPCapture &cap )
 					finack_from_dst = p->tcp().getSeq()+payloadlen+1;
 				recvd_finack_from_dst=false;
 			}
-			if( p->srcAddr() == *dstaddr ) 
+			if( p->srcAddr() == *dstaddr )
 			{
 				if( payloadlen==0 )
 					finack_from_src = p->tcp().getSeq()+1;
@@ -258,7 +258,7 @@ bool TCPConnection::acceptPacket( TCPCapture &cap )
 
 		if( state == TCP_STATE_SYNACK_ACK )
 		{
-			if( p->tcp().ack() ) 
+			if( p->tcp().ack() )
 				state = TCP_STATE_UP; // connection up
 		}
 		else if( state == TCP_STATE_SYN_SYNACK )
@@ -275,10 +275,10 @@ bool TCPConnection::acceptPacket( TCPCapture &cap )
 		{
 			if( p->tcp().ack() )
 			{
-				if( p->srcAddr() == *srcaddr ) 
+				if( p->srcAddr() == *srcaddr )
 					if( p->tcp().getAck() == finack_from_src )
 						recvd_finack_from_src=true;
-				if( p->srcAddr() == *dstaddr ) 
+				if( p->srcAddr() == *dstaddr )
 					if( p->tcp().getAck() == finack_from_dst )
 						recvd_finack_from_dst=true;
 				if( recvd_finack_from_src && recvd_finack_from_dst )
@@ -298,11 +298,11 @@ bool TCPConnection::acceptPacket( TCPCapture &cap )
 
 int TCPConnection::getAllBytesPerSecond()
 {
-        return avg_bps;
+	return avg_bps;
 }
 
 // this implements an activity "light" for this connection... should work
-// just like the send/receive light on a modem. 
+// just like the send/receive light on a modem.
 // needs to be called frequently (at least once per second) to be of any use.
 bool TCPConnection::activityToggle()
 {

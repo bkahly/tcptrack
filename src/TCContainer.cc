@@ -1,5 +1,5 @@
-/* 
- *  Ths code in this file is part of tcptrack. For more information see
+/*
+ *  The code in this file is part of tcptrack. For more information see
  *    http://www.rhythm.cx/~steve/devel/tcptrack
  *
  *     Copyright (C) Steve Benson - 2003
@@ -8,16 +8,16 @@
  *  under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your
  *  option) any later version.
- *   
+ *
  *  tcptrack is distributed in the hope that it will be useful, but
  *  WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
- *  
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ *
  */
 #define _DEFAULT_SOURCE 1
 #define _BSD_SOURCE 1
@@ -74,7 +74,7 @@ void TCContainer::purge( bool npurgeflag )
 void TCContainer::stop()
 {
 	pthread_mutex_lock(&state_mutex);
-	if( state!=TSTATE_RUNNING ) 
+	if( state!=TSTATE_RUNNING )
 	{
 		pthread_mutex_unlock(&state_mutex);
 		return;
@@ -99,7 +99,7 @@ TCContainer::~TCContainer()
 		i++;
 		conhash2.erase(tmp_i);
 		collector.collect(rm);
-	} 
+	}
 }
 
 SortedIterator * TCContainer::getSortedIteratorPtr()
@@ -115,7 +115,7 @@ bool TCContainer::processPacket( TCPCapture &p )
 
 	// a SocketPair is the combination of source/dest ports and addrs.
 	// it is used as a fingerprint to identify connections.
-	SocketPair sp( p.GetPacket().srcAddr(), p.GetPacket().tcp().srcPort(), 
+	SocketPair sp( p.GetPacket().srcAddr(), p.GetPacket().tcp().srcPort(),
 			p.GetPacket().dstAddr(), p.GetPacket().tcp().dstPort() );
 
 	// iterate over all packets that match this SocketPair and see if they'll
@@ -143,7 +143,7 @@ bool TCContainer::processPacket( TCPCapture &p )
 	if( !found && app->detect )
 	{
 		TCPConnection *newcon = guesser.addPacket(p);
-		if( newcon != NULL ) 
+		if( newcon != NULL )
 			conhash2.insert(tccmap::value_type(sp,newcon));
 	}
 
@@ -162,14 +162,14 @@ void TCContainer::maint_thread_run()
 {
 	while( state==TSTATE_RUNNING || state==TSTATE_IDLE )
 	{
-                struct timeval now;
-                gettimeofday(&now,NULL);
-                uint64_t tmp1 = now.tv_sec * 1000000 + now.tv_usec;
-                uint32_t tmp2 = app->refresh_intvl - (tmp1 % app->refresh_intvl);
+		struct timeval now;
+		gettimeofday(&now,NULL);
+		uint64_t tmp1 = now.tv_sec * 1000000 + now.tv_usec;
+		uint32_t tmp2 = app->refresh_intvl - (tmp1 % app->refresh_intvl);
 
 		struct timespec ts;
-                ts.tv_sec=tmp2 / 1000000;
-                ts.tv_nsec= (tmp2 % 1000000) * 1000;
+		ts.tv_sec=tmp2 / 1000000;
+		ts.tv_nsec= (tmp2 % 1000000) * 1000;
 
 		nanosleep(&ts,NULL);
 
@@ -178,12 +178,12 @@ void TCContainer::maint_thread_run()
 		for( tccmap::iterator i=conhash2.begin(); i!=conhash2.end(); )
 		{
 			TCPConnection *ic=(*i).second;
-                        ic->updateCounters();
+				ic->updateCounters();
 
 			// remove closed or stale connections.
 			if( purgeflag==true )
 			{
-				if(    ( ic->isFinished() && ic->getIdleSeconds() > app->remto ) 
+				if(    ( ic->isFinished() && ic->getIdleSeconds() > app->remto )
 						|| ( ic->getState()==TCP_STATE_SYN_SYNACK && ic->getIdleSeconds()>SYN_SYNACK_WAIT )
 						|| ( ic->getState()==TCP_STATE_FIN_FINACK && ic->getIdleSeconds()>FIN_FINACK_WAIT )
 					)
@@ -196,12 +196,12 @@ void TCContainer::maint_thread_run()
 				}
 				else
 					i++;
-			} 
+			}
 			else
 			{
 				i++;
 			}
-		} 
+		}
 
 		unlock();		
 	}
@@ -210,16 +210,16 @@ void TCContainer::maint_thread_run()
 
 void TCContainer::lock()
 {
-        // If we can't get the lock in a few seconds, something is wrong.
-        struct timespec timeout;
-        clock_gettime(CLOCK_REALTIME, &timeout);
-        timeout.tv_sec += 2;
+	// If we can't get the lock in a few seconds, something is wrong.
+	struct timespec timeout;
+	clock_gettime(CLOCK_REALTIME, &timeout);
+	timeout.tv_sec += 2;
 
 	if ( pthread_mutex_timedlock(&conlist_lock, &timeout) != 0 )
-        {
+	{
 		throw GenericError("pthread_mutex_timedlock() failed");
-        }
-        // TODO -- replace all pthread_mutex_lock() with this.
+	}
+	// TODO -- replace all pthread_mutex_lock() with this.
 }
 
 void TCContainer::unlock()
@@ -233,14 +233,14 @@ void TCContainer::unlock()
 void *maint_thread_func( void * arg )
 {
 	TCContainer *c = (TCContainer *) arg;
-        try
-        {
-                c->maint_thread_run();
-        }
-        catch( const AppError &e )
-        {
-                app->fatal(e.msg());
-        }
+	try
+	{
+		c->maint_thread_run();
+	}
+	catch( const AppError &e )
+	{
+		app->fatal(e.msg());
+	}
 	return NULL;
 }
 

@@ -1,5 +1,5 @@
 /* 
- *  Ths code in this file is part of tcptrack. For more information see
+ *  The code in this file is part of tcptrack. For more information see
  *    http://www.rhythm.cx/~steve/devel/tcptrack
  *
  *     Copyright (C) Steve Benson - 2003
@@ -10,7 +10,7 @@
  *  option) any later version.
  *   
  *  tcptrack is distributed in the hope that it will be useful, but
-*  WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  General Public License for more details.
  *   
