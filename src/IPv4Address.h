@@ -20,6 +20,8 @@ public:
 	virtual uint32_t hash() const;
 	virtual IPAddress* Clone() const;
 
+	virtual void GetSockAddr( sockaddr *sa, socklen_t *size ) const;
+
 private:
 	struct in_addr m_addr;
 };

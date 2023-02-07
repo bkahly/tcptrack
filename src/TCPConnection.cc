@@ -37,11 +37,14 @@
 #include "TCPTrack.h"
 #include "TCPPacket.h"
 #include "SocketPair.h"
+#include "GenericError.h"
 
 extern TCPTrack *app;
 
 TCPConnection::~TCPConnection()
 {
+	pthread_join(lookup_thread_tid, NULL);
+
 	delete srcaddr;
 	delete dstaddr;
 	delete endpts;
@@ -119,7 +122,14 @@ TCPConnection::TCPConnection( TCPCapture &p )
 
 	endpts = new SocketPair( *srcaddr, srcport, *dstaddr, dstport);
 
-	// TODO start thread to resolve addresses
+	srcHost[0] = 0;
+	dstHost[0] = 0;
+	srcService[0] = 0;
+	dstService[0] = 0;
+
+	// Start thread to resolve addresses
+	if ( app->names )
+		startNameLookup();
 }
 
 void TCPConnection::purgeAvgStack()
@@ -211,6 +221,7 @@ time_t TCPConnection::getIdleSeconds()
 
 void TCPConnection::updateCountersForPacket( TCPCapture &p )
 {
+	// TODO add an option for payload-based counters
 	//payload_bytes = p.GetPacket().payloadLen() - p.GetPacket().tcp().headerLen();
 	total_bytes_this_interval += p.GetPacket().totalLen();
 	total_byte_count += p.GetPacket().totalLen();
@@ -224,9 +235,8 @@ bool TCPConnection::acceptPacket( TCPCapture &cap )
 	if( state == TCP_STATE_CLOSED )
 		return false;
 
-
 	if(  match(p->srcAddr(), p->dstAddr(), p->tcp().srcPort(), p->tcp().dstPort())
-			|| match(p->dstAddr(), p->srcAddr(), p->tcp().dstPort(), p->tcp().srcPort()) )
+		|| match(p->dstAddr(), p->srcAddr(), p->tcp().dstPort(), p->tcp().srcPort()) )
 	{
 		++packet_count;
 		activity_toggle=true;
@@ -314,4 +324,87 @@ bool TCPConnection::activityToggle()
 SocketPair & TCPConnection::getEndpoints()
 {
 	return *endpts;
+}
+
+void TCPConnection::startNameLookup()
+{
+	pthread_attr_t attr;
+
+	if( pthread_attr_init( &attr ) != 0 )
+		throw GenericError("pthread_attr_init() failed");
+
+	//TODO why and how should this be set?
+	//pthread_attr_setstacksize( &attr, SS_TCC );
+
+	if( pthread_create(&lookup_thread_tid, &attr, NameLookup_thread, this) != 0 )
+		throw GenericError("pthread_create() failed.");
+}
+
+void TCPConnection::doNameLookup()
+{
+	struct sockaddr_storage peer_addr;
+	sockaddr *peer_addr_sa = (sockaddr *)&peer_addr;
+	sockaddr_in *peer_addr_sin = (sockaddr_in *)&peer_addr;
+	sockaddr_in6 *peer_addr_sin6 = (sockaddr_in6 *)&peer_addr;
+	socklen_t peer_addr_len;
+
+	int stat;
+
+	peer_addr_len = sizeof(peer_addr);
+
+	srcaddr->GetSockAddr( peer_addr_sa, &peer_addr_len );
+	if ( peer_addr_sa->sa_family == AF_INET )
+	{
+		peer_addr_sin->sin_port = htons(srcport);
+	}
+	else if ( peer_addr_sa->sa_family == AF_INET6 )
+	{
+		peer_addr_sin6->sin6_port = htons(srcport);
+	}
+
+	stat = getnameinfo(
+		(struct sockaddr *) &peer_addr, peer_addr_len,
+		srcHost, NI_MAXHOST,
+		srcService, NI_MAXSERV,
+		NI_IDN);
+	if (stat != 0)
+	{
+		// Ignore the error
+		srcHost[0] = 0;
+		srcService[0] = 0;
+//		fprintf(stderr, "getnameinfo: %s\n", gai_strerror(stat));
+	}
+
+	peer_addr_len = sizeof(peer_addr);
+
+	dstaddr->GetSockAddr( peer_addr_sa, &peer_addr_len );
+	if ( peer_addr_sa->sa_family == AF_INET )
+	{
+		peer_addr_sin->sin_port = htons(dstport);
+	}
+	else if ( peer_addr_sa->sa_family == AF_INET6 )
+	{
+		peer_addr_sin6->sin6_port = htons(dstport);
+	}
+
+	stat = getnameinfo(
+		(struct sockaddr *) &peer_addr, peer_addr_len,
+		dstHost, NI_MAXHOST,
+		dstService, NI_MAXSERV,
+		NI_IDN);
+	if (stat != 0)
+	{
+		// Ignore the error
+		dstHost[0] = 0;
+		dstService[0] = 0;
+//		fprintf(stderr, "getnameinfo: %s\n", gai_strerror(stat));
+	}
+}
+
+void *NameLookup_thread( void * arg )
+{
+	TCPConnection *c = (TCPConnection *) arg;
+	c->doNameLookup();
+
+	return NULL;
 }

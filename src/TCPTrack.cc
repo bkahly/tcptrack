@@ -29,6 +29,7 @@ void TCPTrack::run( int argc, char **argv )
 
 	remto=cf.remto;
 	detect=cf.detect;
+	names=cf.names;
 	promisc=cf.promisc;
 
 	c = new TCContainer();
@@ -121,7 +122,7 @@ void TCPTrack::fatal( string msg )
 
 void printusage(int argc,char **argv)
 {
-	printf("Usage: %s [-dfhvp] [-r <seconds>] -i <interface> [<filter expression>] [-T <pcap file]\n",argv[0]);
+	printf("Usage: %s [-dfhnpv] [-r <seconds>] -i <interface> | -T <pcap file> [<filter expression>]\n", argv[0]);
 }
 
 struct config parseopts(int argc, char **argv)
@@ -129,13 +130,14 @@ struct config parseopts(int argc, char **argv)
 	int o;
 	struct config cf;
 	cf.remto=CLOSED_PURGE;
+	cf.names=true;
 	cf.promisc=true;
 	cf.detect=true;
 	cf.test_file=NULL;
 	cf.iface = NULL;
 	bool got_iface=false;
 
-	while( (o=getopt(argc,argv,"dhvfi:pr:T:")) > 0 )
+	while( (o=getopt(argc,argv,"dhnpvi:r:T:")) > 0 )
 	{
 		if( o=='h' )
 		{
@@ -156,6 +158,8 @@ struct config parseopts(int argc, char **argv)
 			cf.remto = atoi(optarg);
 		if( o=='d' )
 			cf.detect=false;
+		if( o=='n' )
+			cf.names=false;
 		if( o=='p' )
 			cf.promisc=false;
 		if( o=='T' )

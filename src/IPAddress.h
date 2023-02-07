@@ -7,12 +7,13 @@
 
 #include <stdint.h>
 #include <ostream>
+#include <netinet/in.h>
 
 class IPAddress
 {
 public:
-  IPAddress() { }
-  virtual ~IPAddress() { }
+	IPAddress() { }
+	virtual ~IPAddress() { }
 
 	virtual int GetType() const = 0;
 	virtual bool operator==( const IPAddress & ) const = 0;
@@ -20,6 +21,7 @@ public:
 	virtual char * ptr() const = 0;
 	virtual uint32_t hash() const = 0;
 	virtual IPAddress* Clone() const = 0;
+	virtual void GetSockAddr( sockaddr *sa, socklen_t *size ) const = 0;
 };
 
 std::ostream& operator<<( std::ostream &out, const IPAddress &ip );

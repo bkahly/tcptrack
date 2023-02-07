@@ -66,9 +66,10 @@ public:
 	IPAddress & dstAddr();
 	portnum_t dstPort();
 
-	// TODO Store hostnames
-	//char *dstHost();
-	//char *srcHost();
+	char srcHost[NI_MAXHOST];
+	char dstHost[NI_MAXHOST];
+	char srcService[NI_MAXSERV];
+	char dstService[NI_MAXSERV];
 
 	// returns one of the TCP_STATE_* values reflecting the connection's
 	// state.
@@ -108,6 +109,9 @@ public:
 	// a SocketPair is two IPAddresses and two TCP port numbers.
 	// The pair of each represents this connections src/dst addrs & ports.
 	SocketPair & getEndpoints();
+
+	void doNameLookup();
+
 private:
 	void purgeAvgStack();
 	void updateCountersForPacket( TCPCapture &p );
@@ -138,6 +142,12 @@ private:
 	int avg_bps; // bytes per second
 
 	unsigned int total_bytes_this_interval;
+
+	pthread_t lookup_thread_tid;
+
+	void startNameLookup();
 };
+
+void *NameLookup_thread( void * arg );
 
 #endif

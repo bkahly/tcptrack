@@ -47,6 +47,7 @@ struct config
 	char *fexp;  // filter expression
 	unsigned int remto; // timeout to remove closed connections (secs)
 	bool detect; // detect pre-existing connections?
+	bool names;  // Convert addresses/ports to names?
 	bool promisc; // enable promisc mode?	        
 	char *test_file; // File to use as input data for a test
 };

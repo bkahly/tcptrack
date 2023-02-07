@@ -57,3 +57,13 @@ IPAddress* IPv6Address::Clone() const
 	return new IPv6Address(m_addr);
 }
 
+void IPv6Address::GetSockAddr( sockaddr *sa, socklen_t *size ) const
+{
+	sockaddr_in6 *sa_in6 = (sockaddr_in6 *)sa;
+
+	sa_in6->sin6_family = AF_INET6;
+	memcpy(&(sa_in6->sin6_addr), &(m_addr.s6_addr), sizeof(in6_addr));
+	*size = sizeof(sockaddr_in6);
+
+	return;
+}

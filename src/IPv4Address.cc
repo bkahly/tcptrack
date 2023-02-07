@@ -2,6 +2,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <assert.h>
+#include <string.h>
 
 #include "IPv4Address.h"
 #include "util.h"
@@ -43,3 +44,14 @@ IPAddress* IPv4Address::Clone() const
 	return new IPv4Address(m_addr);
 }
 
+void IPv4Address::GetSockAddr( sockaddr *sa, socklen_t *size ) const
+{
+	sockaddr_in *sa_in = (sockaddr_in *)sa;
+
+	sa_in->sin_family = AF_INET;
+
+	memcpy(&(sa_in->sin_addr), &(m_addr.s_addr), sizeof(in_addr));
+	*size = sizeof(sockaddr_in);
+
+	return;
+}

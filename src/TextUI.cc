@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 #include <signal.h>
 #include <iostream>
 #include "util.h"
@@ -260,21 +261,6 @@ void TextUI::drawui()
 {
 	int row=1;
 
-	int c_client = 1;
-	int c_client_l = 21;
-	int c_server = c_client + c_client_l + 1;
-	int c_server_l = 21;
-	int c_state = c_server + c_server_l + 1;
-	int c_state_l = 7;
-	int c_idle = c_state + c_state_l + 1;
-	int c_idle_l = 4;
-	int c_act = c_idle + c_idle_l + 1;
-	int c_act_l = 1;
-	int c_speed = c_act + c_act_l + 1;
-	int c_speed_l = 8;
-	int c_bytes = c_speed + c_speed_l + 1;
-	int c_bytes_l = 8;
-
 	int x,y;
 	getmaxyx(w,y,x); // this is an ncurses macro
 
@@ -297,6 +283,28 @@ void TextUI::drawui()
 
 		bottom = y;
 	}
+
+	int extra_cl = (x > 78) ? (x - 78)/2 : 0;
+	int extra_sr = (x > 78) ? (x - 78 - extra_cl) : 0;
+
+	int c_client = 1;
+	int c_client_l = 15 + extra_cl;
+	int c_clientpt = c_client + c_client_l + 1;
+	int c_clientpt_l = 5;
+	int c_server = c_clientpt + c_clientpt_l + 1;
+	int c_server_l = 15 + extra_sr;
+	int c_serverpt = c_server + c_server_l + 1;
+	int c_serverpt_l = 5;
+	int c_state = c_serverpt + c_serverpt_l + 1;
+	int c_state_l = 7;
+	int c_idle = c_state + c_state_l + 1;
+	int c_idle_l = 4;
+	int c_act = c_idle + c_idle_l + 1;
+	int c_act_l = 1;
+	int c_speed = c_act + c_act_l + 1;
+	int c_speed_l = 8;
+	int c_bytes = c_speed + c_speed_l + 1;
+	int c_bytes_l = 8;
 
 	erase();
 
@@ -365,11 +373,30 @@ void TextUI::drawui()
 		}
 
 		move(row,c_client);
-		printw("%-15s %5d", ic->srcAddr().ptr(), ic->srcPort() );
+		if (ic->srcHost[0] != 0)
+		{
+			int len = strlen(ic->srcHost);
+			int ind = (len > c_client_l) ? (len - c_client_l) : 0;
+			printw("%*.*s %-5.5s", c_client_l, c_client_l,
+				ic->srcHost+ind, ic->srcService );
+		}
+		else
+			printw("%-*.*s %5d", c_client_l, c_client_l,
+				ic->srcAddr().ptr(), ic->srcPort() );
 		if( ic->srcAddr().GetType() == 6 )
 			row++;
+
 		move(row,c_server);
-		printw("%-15s %5d", ic->dstAddr().ptr(), ic->dstPort());
+		if (ic->dstHost[0] != 0)
+		{
+			int len = strlen(ic->dstHost);
+			int ind = (len > c_server_l) ? (len - c_server_l) : 0;
+			printw("%*.*s %-5.5s", c_server_l, c_server_l,
+				ic->dstHost+ind, ic->dstService );
+		}
+		else
+			printw("%-*.*s %5d", c_server_l, c_server_l,
+				ic->dstAddr().ptr(), ic->dstPort());
 		if( ic->srcAddr().GetType() == 6 )
 			row--;
 

@@ -22,6 +22,7 @@ public:
 	// should probably move these later
 	time_t remto; // closed connection removal timeout
 	bool detect; // detect pre-existing connections?
+	bool names;  // Convert addresses/ports to names?
 	bool promisc; // enable promisc mode?
 	unsigned int refresh_intvl; // How often are we refreshing the UI (usec)
 
