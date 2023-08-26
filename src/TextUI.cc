@@ -198,6 +198,9 @@ void TextUI::displayer_run()
 						sort_type=SORT_IDLE;
 						break;
 					case SORT_IDLE:
+						sort_type=SORT_ACTIVE;
+						break;
+					case SORT_ACTIVE:
 						sort_type=SORT_UN;
 						break;
 				}
@@ -518,6 +521,12 @@ void TextUI::drawui()
 			printw("S");
 			attroff(A_UNDERLINE);
 			printw("orted by idle");
+			break;
+                case SORT_ACTIVE:
+			attron(A_UNDERLINE);
+			printw("S");
+			attroff(A_UNDERLINE);
+			printw("orted by active");
 			break;
 	}
 
