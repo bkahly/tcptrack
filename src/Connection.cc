@@ -101,23 +101,13 @@ Connection::Connection( TCPCapture &p )
         if (swap > 0) {
                 srcaddr = p.GetPacket().dstAddr().Clone();
                 dstaddr = p.GetPacket().srcAddr().Clone();
-                if ( p.GetPacket().IP_protocol == IPPROTO_TCP ) {
-                        srcport = p.GetPacket().tcp().dstPort();
-                        dstport = p.GetPacket().tcp().srcPort();
-                } else {
-                        srcport = 0;
-                        dstport = 0;
-                }
+                srcport = p.GetPacket().dstPort;
+                dstport = p.GetPacket().srcPort;
         } else {
                 srcaddr = p.GetPacket().srcAddr().Clone();
                 dstaddr = p.GetPacket().dstAddr().Clone();
-                if ( p.GetPacket().IP_protocol == IPPROTO_TCP ) {
-                        srcport = p.GetPacket().tcp().srcPort();
-                        dstport = p.GetPacket().tcp().dstPort();
-                } else {
-                        srcport = 0;
-                        dstport = 0;
-                }
+                srcport = p.GetPacket().srcPort;
+                dstport = p.GetPacket().dstPort;
         }
 
 	packet_count=1;
@@ -249,17 +239,8 @@ bool Connection::acceptPacket( TCPCapture &cap )
 {
 	Packet *p = &(cap.GetPacket());
 
-        portnum_t tmp_src, tmp_dst;
-        if ( p->IP_protocol == IPPROTO_TCP ) {
-                tmp_src = p->tcp().srcPort();
-                tmp_dst = p->tcp().dstPort();
-        } else {
-                tmp_src = 0;
-                tmp_dst = 0;
-        }
-
-	if( match(p->srcAddr(), p->dstAddr(), tmp_src, tmp_dst)
-		|| match(p->dstAddr(), p->srcAddr(), tmp_dst, tmp_src) )
+	if( match(p->srcAddr(), p->dstAddr(), p->srcPort, p->dstPort)
+		|| match(p->dstAddr(), p->srcAddr(), p->dstPort, p->srcPort) )
 	{
 		++packet_count;
 		activity_toggle=true;

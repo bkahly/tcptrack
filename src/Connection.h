@@ -28,10 +28,11 @@
 #include <list>
 #include "util.h"
 #include "Packet.h"
-#include "TCPHeader.h"
 #include "TCPCapture.h"
 
 using namespace std;
+
+typedef unsigned short portnum_t;
 
 class Connection
 {

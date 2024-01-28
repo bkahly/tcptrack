@@ -44,11 +44,22 @@ Packet::Packet( const u_char *data, unsigned int data_len )
 
         if ( IP_protocol == IPPROTO_TCP )
         {
-                m_tcp_header = new TCPHeader(data + header_len, data_len - header_len);
+                struct sniff_tcp *tcp = (struct sniff_tcp *)(data + header_len);
+
+                srcPort = ntohs(tcp->th_sport);
+                dstPort = ntohs(tcp->th_dport);
+        }
+        else if ( IP_protocol == IPPROTO_UDP )
+        {
+                struct sniff_udp *udp = (struct sniff_udp *)(data + header_len);
+
+                srcPort = ntohs(udp->uh_sport);
+                dstPort = ntohs(udp->uh_dport);
         }
         else
         {
-                m_tcp_header = NULL;
+                srcPort = 0;
+                dstPort = 0;
         }
 }
 
@@ -59,15 +70,12 @@ Packet::Packet( const Packet &orig )
 	total_len = orig.total_len;
 	header_len = orig.header_len;
 	IP_protocol = orig.IP_protocol;
-	m_tcp_header = new TCPHeader( *orig.m_tcp_header );
 }
 
 Packet::~Packet()
 {
 	delete m_src;
 	delete m_dst;
-        if (m_tcp_header != NULL)
-                delete m_tcp_header;
 }
 
 unsigned int Packet::totalLen() const { return total_len; }

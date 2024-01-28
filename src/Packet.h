@@ -4,7 +4,6 @@
 
 #include <netinet/in.h> // needed 
 #include "IPAddress.h"
-#include "TCPHeader.h"
 
 class Packet
 {
@@ -23,10 +22,11 @@ public:
 	unsigned int payloadLen() const;
 	IPAddress & srcAddr() const;
 	IPAddress & dstAddr() const;
-	TCPHeader & tcp() const { return *m_tcp_header; }
 	static Packet * newPacket( const u_char *data, unsigned int data_len );
 
 	unsigned short IP_protocol;
+        unsigned int srcPort;
+        unsigned int dstPort;
 
 private:
 	unsigned int total_len;
@@ -37,8 +37,6 @@ private:
 	// immediately set them.
 	IPAddress *m_src;
 	IPAddress *m_dst;
-
-	TCPHeader *m_tcp_header;
 };
 
 

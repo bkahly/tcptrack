@@ -126,4 +126,12 @@ struct sniff_tcp {
 	u_short th_urp; /* urgent pointer */
 };
 
+/* UDP header */
+struct sniff_udp {
+	u_short uh_sport; /* source port */
+	u_short uh_dport; /* destination port */
+	u_short uh_len; /* length */
+	u_short uh_sum; /* checksum */
+};
+
 #endif

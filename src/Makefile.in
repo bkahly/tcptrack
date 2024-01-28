@@ -106,7 +106,7 @@ am_tcptrack_OBJECTS = Collector.$(OBJEXT) main.$(OBJEXT) \
 	Sniffer.$(OBJEXT) Connection.$(OBJEXT) util.$(OBJEXT) \
 	SortedIterator.$(OBJEXT) Packet.$(OBJEXT) \
 	IPv4Address.$(OBJEXT) IPv6Address.$(OBJEXT) \
-	TCPHeader.$(OBJEXT) TCPCapture.$(OBJEXT) TCPTrack.$(OBJEXT) \
+	TCPCapture.$(OBJEXT) TCPTrack.$(OBJEXT) \
 	IPAddress.$(OBJEXT) AppError.$(OBJEXT) \
 	PcapError.$(OBJEXT) GenericError.$(OBJEXT)
 tcptrack_OBJECTS = $(am_tcptrack_OBJECTS)
@@ -297,7 +297,7 @@ tcptrack_SOURCES = Collector.cc main.cc TCContainer.cc \
                  Sniffer.cc Connection.cc util.cc \
                  SortedIterator.cc Packet.cc \
                  IPv4Address.cc IPv6Address.cc \
-                 TCPHeader.cc TCPCapture.cc \
+                 TCPCapture.cc \
                  TCPTrack.cc \
                  IPAddress.cc \
                  AppError.cc PcapError.cc GenericError.cc
@@ -307,7 +307,7 @@ noinst_HEADERS = Collector.h PacketBuffer.h TextUI.h \
 								 SortedIterator.h util.h TCContainer.h \
 								 Connection.h \
 								 Packet.h IPv4Address.h IPv6Address.h \
-								 TCPHeader.h TCPCapture.h \
+								 TCPCapture.h \
 								 TCPTrack.h \
 								 IPAddress.h \
 								 AppError.h PcapError.h GenericError.h
@@ -416,7 +416,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/TCContainer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/TCPCapture.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Connection.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/TCPHeader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Packet.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/TCPTrack.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/TextUI.Po@am__quote@
