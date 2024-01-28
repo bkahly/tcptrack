@@ -1,13 +1,12 @@
-#ifndef TCPPACKET_H
-#define TCPPACKET_H 1
+#ifndef PACKET_H
+#define PACKET_H 1
 #define __FAVOR_BSD 1
 
 #include <netinet/in.h> // needed 
 #include "IPAddress.h"
 #include "TCPHeader.h"
-#include "SocketPair.h"
 
-class TCPPacket
+class Packet
 {
 public:
 	/* stuff to do in constructor:
@@ -16,17 +15,18 @@ public:
 	 *  ensure total len >= ip header len
 	 *  verify checksum
 	 */
-	TCPPacket( const u_char *data, unsigned int data_len );
-	TCPPacket( const TCPPacket &orig );
-	~TCPPacket();
+	Packet( const u_char *data, unsigned int data_len );
+	Packet( const Packet &orig );
+	~Packet();
 	unsigned int totalLen() const;
 	unsigned long len() const { return total_len; };
 	unsigned int payloadLen() const;
 	IPAddress & srcAddr() const;
 	IPAddress & dstAddr() const;
 	TCPHeader & tcp() const { return *m_tcp_header; }
-	SocketPair & sockpair() const { return *m_socketpair; }
-	static TCPPacket * newTCPPacket( const u_char *data, unsigned int data_len );
+	static Packet * newPacket( const u_char *data, unsigned int data_len );
+
+	unsigned short IP_protocol;
 
 private:
 	unsigned int total_len;
@@ -39,7 +39,6 @@ private:
 	IPAddress *m_dst;
 
 	TCPHeader *m_tcp_header;
-	SocketPair *m_socketpair;
 };
 
 

@@ -27,7 +27,6 @@
 #include <unistd.h> // for getopt & pause
 #include <limits.h> // for ARG_MAX
 #include <signal.h> // for setting up sig handlers w/sigaction
-#include "TCContainer.h"
 #include "TextUI.h"
 #include "util.h"
 #include "PacketBuffer.h"

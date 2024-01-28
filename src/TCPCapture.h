@@ -2,7 +2,7 @@
 #define TCPCAPTURE_H 1
 
 #include <sys/time.h>
-#include "TCPPacket.h"
+#include "Packet.h"
 
 /* An TCPCapture is a packet captured off the wire that is known to be
  * an TCP packet
@@ -10,14 +10,14 @@
 class TCPCapture
 {
 public:
-	TCPCapture( TCPPacket* tcp_packet,
+	TCPCapture( Packet* tcp_packet,
 			struct timeval nts );
 	TCPCapture( const TCPCapture &orig );
 	~TCPCapture();
-	TCPPacket & GetPacket() const;
+	Packet & GetPacket() const;
 	struct timeval timestamp() const { return m_ts; };
 private:
-	TCPPacket *m_packet;	
+	Packet *m_packet;
 	struct timeval m_ts;
 };
 

@@ -20,10 +20,10 @@
  *  
  */
 
-#include "TCPConnection.h"
+#include "Connection.h"
 #include "Collector.h"
 
-void Collector::collect(TCPConnection *c)
+void Collector::collect(Connection *c)
 {
 	// in the future when multiple SortedIterators are allowed and 
 	// the TCContainer isn't locked, this will have to be sure that the 

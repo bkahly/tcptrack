@@ -26,7 +26,7 @@
 class Collector
 {
 public:
-	void collect(TCPConnection *c);
+	void collect(Connection *c);
 };
 
 #endif

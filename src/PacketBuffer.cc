@@ -32,7 +32,7 @@
 #include "TCContainer.h"
 #include "PacketBuffer.h"
 #include "defs.h"
-#include "TCPPacket.h"
+#include "Packet.h"
 #include "TCPCapture.h"
 #include "GenericError.h"
 
@@ -153,8 +153,7 @@ void PacketBuffer::maint_thread_run()
 			assert( pthread_mutex_lock(&c_lock) == 0 );
 			if( c != NULL )
 			{
-				// The sniffer only hands us TCP packets
-				TCPPacket *tcp_packet = TCPPacket::newTCPPacket(p->p, p->len);
+				Packet *tcp_packet = Packet::newPacket(p->p, p->len);
 				assert ( tcp_packet != NULL );
 
 				TCPCapture c2 (tcp_packet, p->ts);

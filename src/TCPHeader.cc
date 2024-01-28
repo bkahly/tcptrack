@@ -10,8 +10,13 @@ TCPHeader::TCPHeader( const u_char *data, unsigned int data_len )
 
 	assert( tcp->th_off >= 5 ); // tcp header is at least 20 bytes long.
 
-	src = ntohs(tcp->th_sport);
-	dst = ntohs(tcp->th_dport);
+        if (0) { // TODO make optional
+            src = 0;
+            dst = 0;
+        } else {
+            src = ntohs(tcp->th_sport);
+            dst = ntohs(tcp->th_dport);
+        }
 	seqn=ntohl(tcp->th_seq);
 	ackn=ntohl(tcp->th_ack);
 	flags=tcp->th_flags;
@@ -49,25 +54,6 @@ std::ostream & operator<<( std::ostream &out, const TCPHeader &tcp )
 
 	out << " seq=" << tcp.getSeq();
 	out << " ack=" << tcp.getAck();
-
-	out << " flags=";
-
-	if( tcp.fin() ) 
-		out << " FIN";
-	if( tcp.syn() )
-		out << " SYN";
-	if( tcp.rst() ) 
-		out << " RST";
-	if( tcp.psh() ) 
-		out << " PSH";
-	if( tcp.ack() ) 
-		out << " ACK";
-	if( tcp.urg() ) 
-		out << " URG";
-	if( tcp.ece() ) 
-		out << " ECE";
-	if( tcp.cwr() ) 
-		out << " CWR";
 
 	return out;
 }

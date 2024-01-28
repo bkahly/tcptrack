@@ -34,14 +34,12 @@
 #include <ext/hash_map>
 #endif
 #include "headers.h"
-#include "TCPConnection.h"
-#include "Guesser.h"
+#include "Connection.h"
 #include "Collector.h"
-#include "TCPConnection.h"
+#include "Connection.h"
 #include "SortedIterator.h"
 #include "util.h"
 #include "TCPCapture.h"
-#include "SocketPair.h"
 
 #define TSTATE_IDLE 1
 #define TSTATE_RUNNING 2
@@ -55,29 +53,7 @@ using namespace __gnu_cxx;
 
 /////
 
-class TCCEqFunc : public unary_function<SocketPair,bool>
-{
-public:
-	bool operator()( const SocketPair &sp1, const SocketPair &sp2 ) 
-	{
-		if( sp1==sp2 )
-			return true;
-		else
-			return false;
-	}
-};
-
-// TODO: banged out off the top of my head... could be improved.
-class TCCHashFunc : public unary_function<SocketPair, uint32_t>
-{
-public:
-	uint32_t operator()(const SocketPair &sp) const
-	{
-		return sp.hash();
-	}
-};
-
-typedef hash_map<SocketPair, TCPConnection *, TCCHashFunc, TCCEqFunc> tccmap;
+typedef list<Connection *> tcclist;
 
 ////
 
@@ -114,21 +90,13 @@ private:
 
 	// this is a hash table that stores all the connections we're 
 	// currently tracking.
-	tccmap conhash2;	
+	tcclist conhash2;
 	pthread_mutex_t conlist_lock; 
 
 	// this is for the maintenence thread, which runs regularly to
 	// recalculate averages and anything else like that.
 	pthread_t maint_thread_tid;
 	bool run_maint_thread;
-
-	// This thing takes stray packets (TCP packets for connections that
-	// we're not tracking) and keeps track of them and tries to determine
-	// the characteristics of connections that we're not keeping track of
-	// (ie, connections that have no entry in conhash2). When it knows
-	// a connection exists, it feeds it to TCContainer which keeps
-	// track of it as usual.
-	Guesser guesser;
 
 	// for starting up, shutting down the maint thread.
 	int state;

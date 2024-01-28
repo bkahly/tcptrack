@@ -3,11 +3,11 @@
 #include <unistd.h>
 #include "IPv4Address.h"
 #include "IPv6Address.h"
-#include "TCPPacket.h"
+#include "Packet.h"
 #include "headers.h"
 #include "util.h"
 
-TCPPacket::TCPPacket( const u_char *data, unsigned int data_len )
+Packet::Packet( const u_char *data, unsigned int data_len )
 {
 	struct sniff_ip *ip = (struct sniff_ip *)data;
 
@@ -15,7 +15,7 @@ TCPPacket::TCPPacket( const u_char *data, unsigned int data_len )
 	{
 		// make sure that the various length fields are long enough to contain
 		// an IPv4 header (at least 20 bytes).
-		assert( data_len >= 20 ); 
+		assert( data_len >= 20 );
 		assert( ntohs(ip->ip_len) >= 20 ); // TODO: is this right?
 		assert( ip->ip_hl >= 5 );
 
@@ -24,6 +24,7 @@ TCPPacket::TCPPacket( const u_char *data, unsigned int data_len )
 		m_src = new IPv4Address(ip->ip_src);
 		m_dst = new IPv4Address(ip->ip_dst);
 		header_len=ip->ip_hl*4;
+                IP_protocol = ip->ip_p;
 	}
 	else if( ip->ip_v == 6 )
 	{
@@ -31,6 +32,7 @@ TCPPacket::TCPPacket( const u_char *data, unsigned int data_len )
 
 		total_len = htons(ip6->ip_len);
 		header_len = IP6_HEADER_LEN;
+                IP_protocol = ip6->ip_next;
 		m_src = new IPv6Address(ip6->ip_src);
 		m_dst = new IPv6Address(ip6->ip_dst);
 	}
@@ -40,33 +42,39 @@ TCPPacket::TCPPacket( const u_char *data, unsigned int data_len )
 		assert( false );
 	}
 
-	m_tcp_header = new TCPHeader(data + header_len, data_len - header_len);  
-	m_socketpair = new SocketPair(*m_src, m_tcp_header->srcPort(), *m_dst, m_tcp_header->dstPort());
+        if ( IP_protocol == IPPROTO_TCP )
+        {
+                m_tcp_header = new TCPHeader(data + header_len, data_len - header_len);
+        }
+        else
+        {
+                m_tcp_header = NULL;
+        }
 }
 
-TCPPacket::TCPPacket( const TCPPacket &orig )
+Packet::Packet( const Packet &orig )
 {
 	m_src = orig.srcAddr().Clone();
 	m_dst = orig.dstAddr().Clone();
 	total_len = orig.total_len;
 	header_len = orig.header_len;
+	IP_protocol = orig.IP_protocol;
 	m_tcp_header = new TCPHeader( *orig.m_tcp_header );
-	m_socketpair = new SocketPair( *orig.m_socketpair );
 }
 
-TCPPacket::~TCPPacket()
+Packet::~Packet()
 {
 	delete m_src;
 	delete m_dst;
-	delete m_tcp_header;
-	delete m_socketpair;
+        if (m_tcp_header != NULL)
+                delete m_tcp_header;
 }
 
-unsigned int TCPPacket::totalLen() const { return total_len; }
-IPAddress & TCPPacket::srcAddr() const { return *m_src; }
-IPAddress & TCPPacket::dstAddr() const { return *m_dst; }
+unsigned int Packet::totalLen() const { return total_len; }
+IPAddress & Packet::srcAddr() const { return *m_src; }
+IPAddress & Packet::dstAddr() const { return *m_dst; }
 
-std::ostream & operator<<( std::ostream &out, const TCPPacket &ip )
+std::ostream & operator<<( std::ostream &out, const Packet &ip )
 {
 	out << "IP: ";
 	out << "src=" << ip.srcAddr();
@@ -75,24 +83,13 @@ std::ostream & operator<<( std::ostream &out, const TCPPacket &ip )
 	return out;
 }
 
-unsigned int TCPPacket::payloadLen() const
+unsigned int Packet::payloadLen() const
 {
 	return total_len-header_len;
 }
 
-TCPPacket* TCPPacket::newTCPPacket( const u_char *data, unsigned int data_len )
+Packet* Packet::newPacket( const u_char *data, unsigned int data_len )
 {
-	struct sniff_ip *ip = (struct sniff_ip *)data;
-
-	if( ip->ip_v == 4 && ip->ip_p != IPPROTO_TCP ) return NULL;
-
-	if( ip->ip_v == 6 )
-	{
-		struct sniff_ip6 *ip = (struct sniff_ip6 *)data;
-
-		if( ip->ip_next != IPPROTO_TCP ) return NULL;
-	}
-
-	return new TCPPacket(data,data_len);
+	return new Packet(data,data_len);
 }
 

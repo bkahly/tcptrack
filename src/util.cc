@@ -139,44 +139,28 @@ bool checknlp( struct nlp *n )
 			return false;
 		}
 
-		if( tcp->th_sport == 0 )
-			return false;
-
-		if( tcp->th_dport == 0 )
-			return false;
-
 		return true;
-	}
+        }
+        else if( ip->ip_v == 4 )
+        {
+                if( ip->ip_hl < 5 )
+                        return false;
 
-	unsigned int ip_header_len = ip->ip_hl * 4;
+                unsigned int ip_header_len = ip->ip_hl * 4;
 
-	// not enough data to do anything with this...
-	// we're only interested in IPv4 TCP Packets
-	if( n->len < ip_header_len + TCP_HEADER_LEN )
-		return false;
-	
-	if( ip->ip_v != 4 )
-		return false;
+                if( ip->ip_p == IPPROTO_TCP )
+                {
+                        if( ntohs(ip->ip_len) < ip_header_len + TCP_HEADER_LEN )
+                                return false;
 
-	if( ntohs(ip->ip_len) < ip_header_len + TCP_HEADER_LEN ) 
-		return false;
+                        struct sniff_tcp *tcp = (struct sniff_tcp *) (n->p + ip_header_len);
 
-	if( ip->ip_hl < 5 ) 
-		return false;
+                        if( tcp->th_off < 5 ) // tcp header is at least 20 bytes long.
+                                return false;
+                }
 
-	if( ip->ip_p != IPPROTO_TCP ) 
-		return false;
+                return true;
+        }
 
-	struct sniff_tcp *tcp = (struct sniff_tcp *) (n->p + ip_header_len);
-
-	if( tcp->th_off < 5 ) // tcp header is at least 20 bytes long.
-		return false;
-		
-	if( tcp->th_sport == 0 )
-		return false;
-
-	if( tcp->th_dport == 0 )
-		return false;
-
-	return true;
+        return false;
 }

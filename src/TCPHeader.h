@@ -29,6 +29,14 @@ public:
 	portnum_t srcPort() const;
 	portnum_t dstPort() const;
 
+private:
+	seq_t seqn;
+	seq_t ackn;
+	portnum_t src;
+	portnum_t dst;
+	unsigned char flags;
+	unsigned short header_len;
+
 	bool fin() const;
 	bool syn() const;
 	bool rst() const;
@@ -37,14 +45,6 @@ public:
 	bool urg() const;
 	bool ece() const;
 	bool cwr() const;
-
-private:
-	seq_t seqn;
-	seq_t ackn;
-	portnum_t src;
-	portnum_t dst;
-	unsigned char flags;
-	unsigned short header_len;
 };
 
 #endif

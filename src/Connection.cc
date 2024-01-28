@@ -32,78 +32,95 @@
 #endif
 #include <time.h>
 #include "headers.h"
-#include "TCPConnection.h"
+#include "Connection.h"
 #include "util.h"
 #include "TCPTrack.h"
-#include "TCPPacket.h"
-#include "SocketPair.h"
+#include "Packet.h"
 #include "GenericError.h"
 
 extern TCPTrack *app;
 
-TCPConnection::~TCPConnection()
+Connection::~Connection()
 {
 	pthread_join(lookup_thread_tid, NULL);
 
 	delete srcaddr;
 	delete dstaddr;
-	delete endpts;
 }
 
-bool TCPConnection::isFinished()
-{
-	if( state == TCP_STATE_CLOSED || state == TCP_STATE_RESET )
-		return true;
-	return false;
-}
-
-IPAddress & TCPConnection::srcAddr()
+IPAddress & Connection::srcAddr()
 {
 	return *srcaddr;
 }
 
-portnum_t TCPConnection::srcPort()
+portnum_t Connection::srcPort()
 {
 	return srcport;
 }
 
-IPAddress & TCPConnection::dstAddr()
+IPAddress & Connection::dstAddr()
 {
 	return *dstaddr;
 }
 
-portnum_t TCPConnection::dstPort()
+portnum_t Connection::dstPort()
 {
 	return dstport;
 }
 
-int TCPConnection::getPacketCount()
+int Connection::getPacketCount()
 {
 	return packet_count;
 }
 
-long TCPConnection::getTotalByteCount()
+long Connection::getTotalByteCount()
 {
 	return total_byte_count;
 }
 
-int TCPConnection::getState()
+Connection::Connection( TCPCapture &p )
 {
-	return state;
-}
+        char *tmpsrc;
+        char *tmpdst;
+        int swap = 0;
 
-TCPConnection::TCPConnection( TCPCapture &p )
-{
-	srcaddr = p.GetPacket().srcAddr().Clone();
-	dstaddr = p.GetPacket().dstAddr().Clone();
-	srcport = p.GetPacket().tcp().srcPort();
-	dstport = p.GetPacket().tcp().dstPort();
+        // local network is 192.168.0.0/16
+        // set local end as src
+        tmpsrc = p.GetPacket().srcAddr().ptr();
+        tmpdst = p.GetPacket().dstAddr().ptr();
+        if (0 == strcmp( tmpdst, "192.168.3.1")) {
+                swap = 0;
+        } else if (0 == strcmp( tmpsrc, "192.168.3.1")) {
+                swap = 1;
+        } else if (0 == strcmp( tmpsrc, "192.168.3.255")) {
+                swap = 0;
+        } else if (0 == strncmp( tmpdst, "192.168.3.", 10)) {
+                swap = 1;
+        }
+
+        if (swap > 0) {
+                srcaddr = p.GetPacket().dstAddr().Clone();
+                dstaddr = p.GetPacket().srcAddr().Clone();
+                if ( p.GetPacket().IP_protocol == IPPROTO_TCP ) {
+                        srcport = p.GetPacket().tcp().dstPort();
+                        dstport = p.GetPacket().tcp().srcPort();
+                } else {
+                        srcport = 0;
+                        dstport = 0;
+                }
+        } else {
+                srcaddr = p.GetPacket().srcAddr().Clone();
+                dstaddr = p.GetPacket().dstAddr().Clone();
+                if ( p.GetPacket().IP_protocol == IPPROTO_TCP ) {
+                        srcport = p.GetPacket().tcp().srcPort();
+                        dstport = p.GetPacket().tcp().dstPort();
+                } else {
+                        srcport = 0;
+                        dstport = 0;
+                }
+        }
 
 	packet_count=1;
-	if( p.GetPacket().tcp().syn() )
-		state = TCP_STATE_SYN_SYNACK;
-	else
-		state = TCP_STATE_UP;
 
 	// init per-second stats counters
 	last_pkt_ts = time(NULL);
@@ -113,14 +130,14 @@ TCPConnection::TCPConnection( TCPCapture &p )
 	total_byte_count = p.GetPacket().totalLen();
 	total_bytes_this_interval = p.GetPacket().totalLen();
 
+        IP_protocol = p.GetPacket().IP_protocol;
+
 	avg_bps=0;
 
 	finack_from_dst=0;
 	finack_from_src=0;
 	recvd_finack_from_src=false;
 	recvd_finack_from_dst=false;
-
-	endpts = new SocketPair( *srcaddr, srcport, *dstaddr, dstport);
 
 	srcHost[0] = 0;
 	dstHost[0] = 0;
@@ -132,7 +149,7 @@ TCPConnection::TCPConnection( TCPCapture &p )
 		startNameLookup();
 }
 
-void TCPConnection::purgeAvgStack()
+void Connection::purgeAvgStack()
 {
 	struct timeval now;
 	gettimeofday(&now,NULL);
@@ -155,7 +172,7 @@ void TCPConnection::purgeAvgStack()
 
 // updates the byte counters
 // must be called once per UI refresh interval
-void TCPConnection::updateCounters()
+void Connection::updateCounters()
 {
 	purgeAvgStack();
 
@@ -171,7 +188,7 @@ void TCPConnection::updateCounters()
 }
 
 // recalculate packets/bytes per second counters
-void TCPConnection::recalcAvg()
+void Connection::recalcAvg()
 {
 	unsigned int total_bytes = 0;
 	uint64_t time1 = 0;
@@ -197,29 +214,30 @@ void TCPConnection::recalcAvg()
 	}
 }
 
-time_t TCPConnection::getLastPktTimestamp()
+time_t Connection::getLastPktTimestamp()
 {
 	return last_pkt_ts;
 }
 
-bool TCPConnection::match( IPAddress &sa, IPAddress &da, portnum_t sp, portnum_t dp )
+bool Connection::match( IPAddress &sa, IPAddress &da, portnum_t sp, portnum_t dp )
 {
-	if( ! (*srcaddr == sa) )
+        if( ! (*srcaddr == sa) )
 		return false;
 	if( !( *dstaddr == da) )
 		return false;
+        //TODO option to ignore port
 	if( dp != dstport  ||  sp != srcport )
 		return false;
 
 	return true;
 }
 
-time_t TCPConnection::getIdleSeconds()
+time_t Connection::getIdleSeconds()
 {
 	return time(NULL) - getLastPktTimestamp();
 }
 
-void TCPConnection::updateCountersForPacket( TCPCapture &p )
+void Connection::updateCountersForPacket( TCPCapture &p )
 {
 	// TODO add an option for payload-based counters
 	//payload_bytes = p.GetPacket().payloadLen() - p.GetPacket().tcp().headerLen();
@@ -227,16 +245,21 @@ void TCPConnection::updateCountersForPacket( TCPCapture &p )
 	total_byte_count += p.GetPacket().totalLen();
 }
 
-bool TCPConnection::acceptPacket( TCPCapture &cap )
+bool Connection::acceptPacket( TCPCapture &cap )
 {
-	TCPPacket *p = &(cap.GetPacket());
-	unsigned int payloadlen = p->payloadLen() - p->tcp().headerLen();
+	Packet *p = &(cap.GetPacket());
 
-	if( state == TCP_STATE_CLOSED )
-		return false;
+        portnum_t tmp_src, tmp_dst;
+        if ( p->IP_protocol == IPPROTO_TCP ) {
+                tmp_src = p->tcp().srcPort();
+                tmp_dst = p->tcp().dstPort();
+        } else {
+                tmp_src = 0;
+                tmp_dst = 0;
+        }
 
-	if(  match(p->srcAddr(), p->dstAddr(), p->tcp().srcPort(), p->tcp().dstPort())
-		|| match(p->dstAddr(), p->srcAddr(), p->tcp().dstPort(), p->tcp().srcPort()) )
+	if( match(p->srcAddr(), p->dstAddr(), tmp_src, tmp_dst)
+		|| match(p->dstAddr(), p->srcAddr(), tmp_dst, tmp_src) )
 	{
 		++packet_count;
 		activity_toggle=true;
@@ -244,69 +267,15 @@ bool TCPConnection::acceptPacket( TCPCapture &cap )
 		// recalculate packets/bytes per second counters
 		updateCountersForPacket(cap);
 
-		if( p->tcp().fin() )
-		{
-			// if this is a fin going from cli->srv
-			// expect an appropriate ack from server
-			if( p->srcAddr() == *srcaddr )
-			{
-				if( payloadlen==0 )
-					finack_from_dst = p->tcp().getSeq()+1;
-				else
-					finack_from_dst = p->tcp().getSeq()+payloadlen+1;
-				recvd_finack_from_dst=false;
-			}
-			if( p->srcAddr() == *dstaddr )
-			{
-				if( payloadlen==0 )
-					finack_from_src = p->tcp().getSeq()+1;
-				else
-					finack_from_src = p->tcp().getSeq()+payloadlen+1;
-				recvd_finack_from_src=false;
-			}
-		}
-
-		if( state == TCP_STATE_SYNACK_ACK )
-		{
-			if( p->tcp().ack() )
-				state = TCP_STATE_UP; // connection up
-		}
-		else if( state == TCP_STATE_SYN_SYNACK )
-		{
-			if( p->tcp().syn() && p->tcp().ack() )
-				state = TCP_STATE_SYNACK_ACK; // SYN|ACK sent, awaiting ACK
-		}
-		else if( state == TCP_STATE_UP )
-		{
-			if( p->tcp().fin() )
-				state = TCP_STATE_FIN_FINACK; // FIN sent, awaiting FIN|ACK
-		}
-		else if( state == TCP_STATE_FIN_FINACK )
-		{
-			if( p->tcp().ack() )
-			{
-				if( p->srcAddr() == *srcaddr )
-					if( p->tcp().getAck() == finack_from_src )
-						recvd_finack_from_src=true;
-				if( p->srcAddr() == *dstaddr )
-					if( p->tcp().getAck() == finack_from_dst )
-						recvd_finack_from_dst=true;
-				if( recvd_finack_from_src && recvd_finack_from_dst )
-					state=TCP_STATE_CLOSED;
-			}
-		}
-		if( p->tcp().rst() )
-			state = TCP_STATE_RESET;
-
 		last_pkt_ts = time(NULL);
 
 		return true;
 	}
-	// packet rejected because this connection is closed.
+	// packet rejected because addr/port doesn't match
 	return false;
 }
 
-int TCPConnection::getAllBytesPerSecond()
+int Connection::getAllBytesPerSecond()
 {
 	return avg_bps;
 }
@@ -314,19 +283,14 @@ int TCPConnection::getAllBytesPerSecond()
 // this implements an activity "light" for this connection... should work
 // just like the send/receive light on a modem.
 // needs to be called frequently (at least once per second) to be of any use.
-bool TCPConnection::activityToggle()
+bool Connection::activityToggle()
 {
 	bool r = activity_toggle;
 	activity_toggle=false;
 	return r;
 }
 
-SocketPair & TCPConnection::getEndpoints()
-{
-	return *endpts;
-}
-
-void TCPConnection::startNameLookup()
+void Connection::startNameLookup()
 {
 	pthread_attr_t attr;
 
@@ -340,7 +304,7 @@ void TCPConnection::startNameLookup()
 		throw GenericError("pthread_create() failed.");
 }
 
-void TCPConnection::doNameLookup()
+void Connection::doNameLookup()
 {
 	struct sockaddr_storage peer_addr;
 	sockaddr *peer_addr_sa = (sockaddr *)&peer_addr;
@@ -403,7 +367,7 @@ void TCPConnection::doNameLookup()
 
 void *NameLookup_thread( void * arg )
 {
-	TCPConnection *c = (TCPConnection *) arg;
+	Connection *c = (Connection *) arg;
 	c->doNameLookup();
 
 	return NULL;

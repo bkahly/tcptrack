@@ -30,13 +30,13 @@
 SortedIterator::SortedIterator( TCContainer *c ) 
 {
 	numcons = c->numConnections();
-	cons = (TCPConnection **) malloc(numcons*sizeof(TCPConnection *));
+	cons = (Connection **) malloc(numcons*sizeof(Connection *));
 
 	// fill up the array with pointers to the connections
 	int index=0;
-	for( tccmap::iterator i=c->conhash2.begin(); i!=c->conhash2.end(); i++ )
+	for( tcclist::iterator i=c->conhash2.begin(); i!=c->conhash2.end(); i++ )
 	{
-		cons[index]=(*i).second;
+		cons[index]=(*i);
 		++index;
 	}
 
@@ -49,19 +49,19 @@ void SortedIterator::sort( int sort_type )
 {
 	if( numcons > 1 ) {
 		if( sort_type == SORT_RATE )
-			qsort(cons,numcons,sizeof(TCPConnection *),compare_rate);
+			qsort(cons,numcons,sizeof(Connection *),compare_rate);
 		else if( sort_type == SORT_BYTES )
-			qsort(cons,numcons,sizeof(TCPConnection *),compare_bytes);
+			qsort(cons,numcons,sizeof(Connection *),compare_bytes);
 		else if( sort_type == SORT_IDLE )
-			qsort(cons,numcons,sizeof(TCPConnection *),compare_idle);
+			qsort(cons,numcons,sizeof(Connection *),compare_idle);
 		else if( sort_type == SORT_ACTIVE )
-			qsort(cons,numcons,sizeof(TCPConnection *),compare_active);
+			qsort(cons,numcons,sizeof(Connection *),compare_active);
 	}
 }
 
 // get the next connection and advance our current location.
 // returns NULL if there are no more connections.
-TCPConnection * SortedIterator::getNext()
+Connection * SortedIterator::getNext()
 {
 	if( cur >= numcons ) 
 		return NULL;
@@ -82,14 +82,14 @@ SortedIterator::~SortedIterator()
 /////////////////////////////////////////////
 
 // this is a callback function used from qsort in sort(). 
-// it performs the comparison of the TCPConnection objects based on current throughput.
+// it performs the comparison of the Connection objects based on current throughput.
 int compare_rate(const void *c1, const void *c2)
 {
-	TCPConnection * con1;
-	TCPConnection * con2;
+	Connection * con1;
+	Connection * con2;
 
-	con1=* (TCPConnection **) c1;
-	con2=* (TCPConnection **) c2;
+	con1=* (Connection **) c1;
+	con2=* (Connection **) c2;
 
 
 	if( con1->getAllBytesPerSecond() > con2->getAllBytesPerSecond() )
@@ -108,14 +108,14 @@ int compare_rate(const void *c1, const void *c2)
 }
 
 // this is a callback function used from qsort in sort(). 
-// it performs the comparison of the TCPConnection objects based on total byte count.
+// it performs the comparison of the Connection objects based on total byte count.
 int compare_bytes(const void *c1, const void *c2)
 {
-	TCPConnection * con1;
-	TCPConnection * con2;
+	Connection * con1;
+	Connection * con2;
 
-	con1=* (TCPConnection **) c1;
-	con2=* (TCPConnection **) c2;
+	con1=* (Connection **) c1;
+	con2=* (Connection **) c2;
 
 
 	if( con1->getTotalByteCount() > con2->getTotalByteCount() )
@@ -134,14 +134,14 @@ int compare_bytes(const void *c1, const void *c2)
 }
 
 // this is a callback function used from qsort in sort().
-// it performs the comparison of the TCPConnection objects based on the idle time.
+// it performs the comparison of the Connection objects based on the idle time.
 int compare_idle(const void *c1, const void *c2)
 {
-	TCPConnection * con1;
-	TCPConnection * con2;
+	Connection * con1;
+	Connection * con2;
 
-	con1=* (TCPConnection **) c1;
-	con2=* (TCPConnection **) c2;
+	con1=* (Connection **) c1;
+	con2=* (Connection **) c2;
 
 	if( con1->getIdleSeconds() < con2->getIdleSeconds() )
 		return 1;
@@ -152,14 +152,14 @@ int compare_idle(const void *c1, const void *c2)
 }
 
 // this is a callback function used from qsort in sort().
-// it performs the comparison of the TCPConnection objects based on the inverse of idle time.
+// it performs the comparison of the Connection objects based on the inverse of idle time.
 int compare_active(const void *c1, const void *c2)
 {
-	TCPConnection * con1;
-	TCPConnection * con2;
+	Connection * con1;
+	Connection * con2;
 
-	con1=* (TCPConnection **) c1;
-	con2=* (TCPConnection **) c2;
+	con1=* (Connection **) c1;
+	con2=* (Connection **) c2;
 
 	if( con1->getIdleSeconds() < con2->getIdleSeconds() )
 		return -1;

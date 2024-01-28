@@ -26,15 +26,13 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
-#include "TCPConnection.h"
+#include "Connection.h"
 #include "Collector.h"
 #include "TCContainer.h"
 #include "SortedIterator.h"
 #include "defs.h"
 #include "util.h"
-#include "Guesser.h"
 //#include "IPv4Packet.h"
-#include "SocketPair.h"
 #include "TCPTrack.h"
 #include "GenericError.h"
 
@@ -92,10 +90,10 @@ void TCContainer::stop()
 TCContainer::~TCContainer()
 {
 	stop();
-	for( tccmap::iterator i=conhash2.begin(); i!=conhash2.end(); )
+	for( tcclist::iterator i=conhash2.begin(); i!=conhash2.end(); )
 	{
-		TCPConnection *rm = (*i).second;
-		tccmap::iterator tmp_i = i;
+		Connection *rm = (*i);
+		tcclist::iterator tmp_i = i;
 		i++;
 		conhash2.erase(tmp_i);
 		collector.collect(rm);
@@ -113,17 +111,12 @@ bool TCContainer::processPacket( TCPCapture &p )
 	lock();
 	bool found = false;
 
-	// a SocketPair is the combination of source/dest ports and addrs.
-	// it is used as a fingerprint to identify connections.
-	SocketPair sp( p.GetPacket().srcAddr(), p.GetPacket().tcp().srcPort(),
-			p.GetPacket().dstAddr(), p.GetPacket().tcp().dstPort() );
-
-	// iterate over all packets that match this SocketPair and see if they'll
-	// take the packet.
-	pair<tccmap::const_iterator, tccmap::const_iterator> pr = conhash2.equal_range(sp);
-	for( tccmap::const_iterator i = pr.first; i!=pr.second; i++ )
+	// iterate over all connections and see if they'll take the packet.
+	for( tcclist::const_iterator i = conhash2.begin();
+            i!=conhash2.end() && found==false;
+            i++ )
 	{
-		TCPConnection *ic = (*i).second;
+		Connection *ic = (*i);
 		if( ic->acceptPacket( p ) )
 		{
 			found=true;
@@ -131,20 +124,11 @@ bool TCContainer::processPacket( TCPCapture &p )
 	}
 
 	// is this a new connection?
-	if( found==false && (p.GetPacket().tcp().syn()) && !(p.GetPacket().tcp().ack()) )
+	if( found==false )
 	{
-		TCPConnection *newcon = new TCPConnection( p );
+		Connection *newcon = new Connection( p );
 		found = true;
-		conhash2.insert(tccmap::value_type(sp,newcon));
-	}
-
-	// a stray packet. Feed it to guesser. Guesser tries to learn about
-	// connections that we're not aware of.
-	if( !found && app->detect )
-	{
-		TCPConnection *newcon = guesser.addPacket(p);
-		if( newcon != NULL )
-			conhash2.insert(tccmap::value_type(sp,newcon));
+		conhash2.push_back(newcon);
 	}
 
 	unlock();
@@ -175,21 +159,18 @@ void TCContainer::maint_thread_run()
 
 		lock();
 
-		for( tccmap::iterator i=conhash2.begin(); i!=conhash2.end(); )
+		for( tcclist::iterator i=conhash2.begin(); i!=conhash2.end(); )
 		{
-			TCPConnection *ic=(*i).second;
+			Connection *ic=(*i);
 				ic->updateCounters();
 
 			// remove closed or stale connections.
 			if( purgeflag==true )
 			{
-				if(    ( ic->isFinished() && ic->getIdleSeconds() > app->remto )
-						|| ( ic->getState()==TCP_STATE_SYN_SYNACK && ic->getIdleSeconds()>SYN_SYNACK_WAIT )
-						|| ( ic->getState()==TCP_STATE_FIN_FINACK && ic->getIdleSeconds()>FIN_FINACK_WAIT )
-					)
+				if( ic->getIdleSeconds() > app->remto )
 				{
-					TCPConnection *rm = ic;
-					tccmap::iterator tmp_i = i;
+					Connection *rm = ic;
+					tcclist::iterator tmp_i = i;
 					i++;
 					conhash2.erase(tmp_i);
 					collector.collect(rm);

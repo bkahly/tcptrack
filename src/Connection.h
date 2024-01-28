@@ -19,36 +19,28 @@
  *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  */
-#ifndef TCPCONNECTION_H
-#define TCPCONNECTION_H 1
+#ifndef CONNECTION_H
+#define CONNECTION_H 1
 
 #include <stdio.h>
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <list>
 #include "util.h"
-#include "TCPPacket.h"
+#include "Packet.h"
 #include "TCPHeader.h"
 #include "TCPCapture.h"
-#include "SocketPair.h"
-
-#define TCP_STATE_SYN_SYNACK    1 // initial SYN sent, waiting for SYN ACK
-#define TCP_STATE_SYNACK_ACK 2 // SYN&ACK response sent, waiting for ACK
-#define TCP_STATE_UP    3 // SYNACK response sent
-#define TCP_STATE_FIN_FINACK 4
-#define TCP_STATE_CLOSED 5
-#define TCP_STATE_RESET 6
 
 using namespace std;
 
-class TCPConnection
+class Connection
 {
 public:
 	// constructor, which needs the initial packet that created this
 	// connection, or any packet that is going from client->server.
 	// See comments in Guesser.cc for an explanation...
-	TCPConnection( TCPCapture &p );
-	~TCPConnection();
+	Connection( TCPCapture &p );
+	~Connection();
 
 	// returns true if the given addresses/ports are relevant to this
 	// connection.
@@ -71,13 +63,7 @@ public:
 	char srcService[NI_MAXSERV];
 	char dstService[NI_MAXSERV];
 
-	// returns one of the TCP_STATE_* values reflecting the connection's
-	// state.
-	int getState();
-
-	// returns true if this connection is closed and no more traffic
-	// is expected for it.
-	bool isFinished();
+        unsigned short IP_protocol;
 
 	// timestamp of last packet sent either way
 	time_t getLastPktTimestamp();
@@ -106,10 +92,6 @@ public:
 	// this counts the tcp and ip headers (but not link layer header)
 	int getAllBytesPerSecond();
 
-	// a SocketPair is two IPAddresses and two TCP port numbers.
-	// The pair of each represents this connections src/dst addrs & ports.
-	SocketPair & getEndpoints();
-
 	void doNameLookup();
 
 private:
@@ -121,14 +103,10 @@ private:
 	bool recvd_finack_from_src;
 	bool recvd_finack_from_dst;
 
-	SocketPair *endpts;
-
 	portnum_t srcport; // client port
 	portnum_t dstport; // server port
 	IPAddress *srcaddr; // client addr
 	IPAddress *dstaddr; // server addr
-
-	int state;
 
 	time_t last_pkt_ts;
 

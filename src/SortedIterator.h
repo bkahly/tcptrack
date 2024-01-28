@@ -29,7 +29,7 @@
 #define SORT_ACTIVE 5
 
 class TCContainer;
-class TCPConnection;
+class Connection;
 
 int compare_rate(const void *, const void *);
 int compare_bytes(const void *, const void *);
@@ -41,11 +41,11 @@ class SortedIterator
 public:
 	SortedIterator( TCContainer *c );
 	~SortedIterator();
-	TCPConnection * getNext();
+	Connection * getNext();
 	void sort( int sort_type );
 	void rewind();
 private:
-	TCPConnection **cons;
+	Connection **cons;
 	unsigned int numcons;
 	unsigned int cur;
 };

@@ -320,7 +320,7 @@ void TextUI::drawui()
 	move(0,c_server);
 	printw("Server");
 	move(0,c_state);
-	printw("%-*.*s", c_state_l, c_state_l, "State");
+	printw("%-*.*s", c_state_l, c_state_l, "Prot");
 	move(0,c_idle);
 	printw("Idle");
 	move(0,c_act);
@@ -345,7 +345,7 @@ void TextUI::drawui()
 
 	int Bps_total=0; // the total speed
 	int Byt_total=0; // the total bytes
-	while( TCPConnection *ic=i->getNext() )
+	while( Connection *ic=i->getNext() )
 	{
 		ic->recalcAvg();
 		Bps_total+=ic->getAllBytesPerSecond();
@@ -358,7 +358,7 @@ void TextUI::drawui()
 		i->sort( sort_type );
 
 	unsigned int ic_i=0; // for scrolling
-	while( TCPConnection *ic=i->getNext() )
+	while( Connection *ic=i->getNext() )
 	{
 
 		if( row == size_y-2 )
@@ -367,13 +367,6 @@ void TextUI::drawui()
 		++ic_i;
 		if( ic_i <= doffset )
 			continue;
-
-
-		if( paused==false &&  (ic->getState() == TCP_STATE_CLOSED || ic->getState() == TCP_STATE_RESET)
-				&& time(NULL) - ic->getLastPktTimestamp() > app->remto )
-		{
-			continue;
-		}
 
 		move(row,c_client);
 		if (ic->srcHost[0] != 0)
@@ -406,18 +399,18 @@ void TextUI::drawui()
 		move(row,c_state);
 		printw("             ");
 		move(row,c_state);
-		if( ic->getState() == TCP_STATE_SYN_SYNACK )
-			printw("%-*.*s", c_state_l, c_state_l, "SYN_SNT");
-		else if( ic->getState() == TCP_STATE_SYNACK_ACK )
-			printw("%-*.*s", c_state_l, c_state_l, "SYNAKAK");
-		else if( ic->getState() == TCP_STATE_UP )
-			printw("%-*.*s", c_state_l, c_state_l, "ESTABLI");
-		else if( ic->getState() == TCP_STATE_FIN_FINACK )
-			printw("%-*.*s", c_state_l, c_state_l, "CLOSING");
-		else if( ic->getState() == TCP_STATE_CLOSED )
-			printw("%-*.*s", c_state_l, c_state_l, "CLOSED");
-		else if( ic->getState() == TCP_STATE_RESET )
-			printw("%-*.*s", c_state_l, c_state_l, "RESET");
+                if (ic->IP_protocol == 1) {
+                    printw("%-*.*s", c_state_l, c_state_l, "ICMP");
+                } else if (ic->IP_protocol == 2) {
+                    printw("%-*.*s", c_state_l, c_state_l, "IGMP");
+                } else if (ic->IP_protocol == 6) {
+                    printw("%-*.*s", c_state_l, c_state_l, "TCP");
+                } else if (ic->IP_protocol == 17) {
+                    printw("%-*.*s", c_state_l, c_state_l, "UDP");
+                } else {
+                    printw("%*d", c_state_l, ic->IP_protocol);
+                }
+                //TODO Improve protocol to text conversions
 
 		move(row,c_idle);
 		if( ic->getIdleSeconds() < 60 )

@@ -3,11 +3,11 @@
 #include <typeinfo>
 #include <unistd.h>
 #include <sys/time.h>
-#include "TCPPacket.h"
+#include "Packet.h"
 #include "TCPCapture.h"
 #include "util.h"
 
-TCPCapture::TCPCapture( TCPPacket *tcp_packet,
+TCPCapture::TCPCapture( Packet *tcp_packet,
 		struct timeval nts )
 {
 	m_packet = tcp_packet;
@@ -16,7 +16,7 @@ TCPCapture::TCPCapture( TCPPacket *tcp_packet,
 
 TCPCapture::TCPCapture( const TCPCapture & orig )
 {
-	m_packet = new TCPPacket( *orig.m_packet );
+	m_packet = new Packet( *orig.m_packet );
 	m_ts = orig.m_ts;
 }
 
@@ -26,7 +26,7 @@ TCPCapture::~TCPCapture()
 		delete m_packet;
 }
 
-TCPPacket & TCPCapture::GetPacket() const
+Packet & TCPCapture::GetPacket() const
 {
 	return *m_packet;
 }

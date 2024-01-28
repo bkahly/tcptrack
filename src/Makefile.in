@@ -103,12 +103,12 @@ am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_tcptrack_OBJECTS = Collector.$(OBJEXT) main.$(OBJEXT) \
 	TCContainer.$(OBJEXT) TextUI.$(OBJEXT) PacketBuffer.$(OBJEXT) \
-	Sniffer.$(OBJEXT) TCPConnection.$(OBJEXT) util.$(OBJEXT) \
-	SortedIterator.$(OBJEXT) TCPPacket.$(OBJEXT) \
+	Sniffer.$(OBJEXT) Connection.$(OBJEXT) util.$(OBJEXT) \
+	SortedIterator.$(OBJEXT) Packet.$(OBJEXT) \
 	IPv4Address.$(OBJEXT) IPv6Address.$(OBJEXT) \
 	TCPHeader.$(OBJEXT) TCPCapture.$(OBJEXT) TCPTrack.$(OBJEXT) \
-	SocketPair.$(OBJEXT) IPAddress.$(OBJEXT) AppError.$(OBJEXT) \
-	PcapError.$(OBJEXT) GenericError.$(OBJEXT) Guesser.$(OBJEXT)
+	IPAddress.$(OBJEXT) AppError.$(OBJEXT) \
+	PcapError.$(OBJEXT) GenericError.$(OBJEXT)
 tcptrack_OBJECTS = $(am_tcptrack_OBJECTS)
 tcptrack_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
@@ -294,21 +294,21 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 tcptrack_SOURCES = Collector.cc main.cc TCContainer.cc \
                  TextUI.cc  PacketBuffer.cc \
-                 Sniffer.cc TCPConnection.cc util.cc \
-                 SortedIterator.cc TCPPacket.cc \
+                 Sniffer.cc Connection.cc util.cc \
+                 SortedIterator.cc Packet.cc \
                  IPv4Address.cc IPv6Address.cc \
                  TCPHeader.cc TCPCapture.cc \
-                 TCPTrack.cc SocketPair.cc \
-								 IPAddress.cc \
-                 AppError.cc PcapError.cc GenericError.cc Guesser.cc
+                 TCPTrack.cc \
+                 IPAddress.cc \
+                 AppError.cc PcapError.cc GenericError.cc
 
 noinst_HEADERS = Collector.h PacketBuffer.h TextUI.h \
 								 defs.h Sniffer.h headers.h \
 								 SortedIterator.h util.h TCContainer.h \
-								 TCPConnection.h Guesser.h \
-								 TCPPacket.h IPv4Address.h IPv6Address.h \
+								 Connection.h \
+								 Packet.h IPv4Address.h IPv6Address.h \
 								 TCPHeader.h TCPCapture.h \
-								 TCPTrack.h SocketPair.h \
+								 TCPTrack.h \
 								 IPAddress.h \
 								 AppError.h PcapError.h GenericError.h
 
@@ -406,20 +406,18 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AppError.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Collector.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/GenericError.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Guesser.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/IPAddress.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/IPv4Address.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/IPv6Address.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/PacketBuffer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/PcapError.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Sniffer.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/SocketPair.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/SortedIterator.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/TCContainer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/TCPCapture.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/TCPConnection.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Connection.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/TCPHeader.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/TCPPacket.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Packet.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/TCPTrack.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/TextUI.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
