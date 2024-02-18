@@ -3,6 +3,7 @@
 #define __FAVOR_BSD 1
 
 #include <netinet/in.h> // needed 
+#include "util.h"
 #include "IPAddress.h"
 
 class Packet
@@ -14,7 +15,7 @@ public:
 	 *  ensure total len >= ip header len
 	 *  verify checksum
 	 */
-	Packet( const u_char *data, unsigned int data_len );
+	Packet( const u_char *data, unsigned int data_len, util_time_t ts );
 	Packet( const Packet &orig );
 	~Packet();
 	unsigned int totalLen() const;
@@ -22,11 +23,12 @@ public:
 	unsigned int payloadLen() const;
 	IPAddress & srcAddr() const;
 	IPAddress & dstAddr() const;
-	static Packet * newPacket( const u_char *data, unsigned int data_len );
+	static Packet * newPacket( const u_char *data, unsigned int data_len, util_time_t ts );
 
 	unsigned short IP_protocol;
         unsigned int srcPort;
         unsigned int dstPort;
+        util_time_t timeStamp;
 
 private:
 	unsigned int total_len;

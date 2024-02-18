@@ -43,7 +43,10 @@ struct nlp *getnlp( const u_char *p, int dlt, const pcap_pkthdr *pcap )
 	struct nlp *n = (struct nlp *) malloc( sizeof(struct nlp) );
 
 	n->p=NULL;
-	n->ts = pcap->ts;
+	n->nlp_ts = pcap->ts.tv_sec;
+	n->nlp_ts *= 1000000;
+	n->nlp_ts += pcap->ts.tv_usec;
+	n->nlp_ts *= 1000;
 	n->len = 0;
 	int vlan_frame = 0;
 
@@ -163,4 +166,18 @@ bool checknlp( struct nlp *n )
         }
 
         return false;
+}
+
+util_time_t util_get_current_time()
+{
+        util_time_t rtn_time;
+        struct timespec tmp_time;
+
+        clock_gettime(CLOCK_REALTIME, &tmp_time);
+
+        rtn_time = tmp_time.tv_sec;
+        rtn_time *= 1000000000;
+        rtn_time += tmp_time.tv_nsec;
+
+        return rtn_time;
 }

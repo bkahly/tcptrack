@@ -106,7 +106,7 @@ SortedIterator * TCContainer::getSortedIteratorPtr()
 }
 
 // the sniffer (or PacketBuffer rather) hands us packets via this method.
-bool TCContainer::processPacket( TCPCapture &p )
+bool TCContainer::processPacket( Packet &p )
 {
 	lock();
 	bool found = false;
@@ -146,9 +146,7 @@ void TCContainer::maint_thread_run()
 {
 	while( state==TSTATE_RUNNING || state==TSTATE_IDLE )
 	{
-		struct timeval now;
-		gettimeofday(&now,NULL);
-		uint64_t tmp1 = now.tv_sec * 1000000 + now.tv_usec;
+		uint64_t tmp1 = util_get_current_time() / 1000;
 		uint32_t tmp2 = app->refresh_intvl - (tmp1 % app->refresh_intvl);
 
 		struct timespec ts;

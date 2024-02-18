@@ -26,14 +26,12 @@
 #include <time.h>
 #include <stdio.h>
 #include <pthread.h>
-#include <time.h>
 #include <assert.h>
 #include "headers.h"
 #include "TCContainer.h"
 #include "PacketBuffer.h"
 #include "defs.h"
 #include "Packet.h"
-#include "TCPCapture.h"
 #include "GenericError.h"
 
 PacketBuffer::PacketBuffer()
@@ -153,11 +151,10 @@ void PacketBuffer::maint_thread_run()
 			assert( pthread_mutex_lock(&c_lock) == 0 );
 			if( c != NULL )
 			{
-				Packet *tcp_packet = Packet::newPacket(p->p, p->len);
+				Packet *tcp_packet = Packet::newPacket(p->p, p->len, p->nlp_ts);
 				assert ( tcp_packet != NULL );
 
-				TCPCapture c2 (tcp_packet, p->ts);
-				c->processPacket( c2 );
+				c->processPacket( *tcp_packet );
 			}
 			assert( pthread_mutex_unlock(&c_lock) == 0 );
 

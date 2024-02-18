@@ -7,7 +7,7 @@
 #include "headers.h"
 #include "util.h"
 
-Packet::Packet( const u_char *data, unsigned int data_len )
+Packet::Packet( const u_char *data, unsigned int data_len, util_time_t ts )
 {
 	struct sniff_ip *ip = (struct sniff_ip *)data;
 
@@ -61,6 +61,8 @@ Packet::Packet( const u_char *data, unsigned int data_len )
                 srcPort = 0;
                 dstPort = 0;
         }
+
+        timeStamp = ts;
 }
 
 Packet::Packet( const Packet &orig )
@@ -70,6 +72,7 @@ Packet::Packet( const Packet &orig )
 	total_len = orig.total_len;
 	header_len = orig.header_len;
 	IP_protocol = orig.IP_protocol;
+        timeStamp = orig.timeStamp;
 }
 
 Packet::~Packet()
@@ -96,8 +99,8 @@ unsigned int Packet::payloadLen() const
 	return total_len-header_len;
 }
 
-Packet* Packet::newPacket( const u_char *data, unsigned int data_len )
+Packet* Packet::newPacket( const u_char *data, unsigned int data_len, util_time_t ts )
 {
-	return new Packet(data,data_len);
+	return new Packet(data, data_len, ts);
 }
 

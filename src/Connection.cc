@@ -30,7 +30,6 @@
 #elif HAVE_PCAP_H
 #include <pcap.h>
 #endif
-#include <time.h>
 #include "headers.h"
 #include "Connection.h"
 #include "util.h"
@@ -68,9 +67,14 @@ portnum_t Connection::dstPort()
 	return dstport;
 }
 
-int Connection::getPacketCount()
+int Connection::getLocalPacketCount()
 {
-	return packet_count;
+	return loc_packet_count;
+}
+
+int Connection::getRemotePacketCount()
+{
+	return rem_packet_count;
 }
 
 long Connection::getTotalByteCount()
@@ -78,7 +82,7 @@ long Connection::getTotalByteCount()
 	return total_byte_count;
 }
 
-Connection::Connection( TCPCapture &p )
+Connection::Connection( Packet &p )
 {
         char *tmpsrc;
         char *tmpdst;
@@ -86,8 +90,8 @@ Connection::Connection( TCPCapture &p )
 
         // local network is 192.168.0.0/16
         // set local end as src
-        tmpsrc = p.GetPacket().srcAddr().ptr();
-        tmpdst = p.GetPacket().dstAddr().ptr();
+        tmpsrc = p.srcAddr().ptr();
+        tmpdst = p.dstAddr().ptr();
         if (0 == strcmp( tmpdst, "192.168.3.1")) {
                 swap = 0;
         } else if (0 == strcmp( tmpsrc, "192.168.3.1")) {
@@ -99,28 +103,32 @@ Connection::Connection( TCPCapture &p )
         }
 
         if (swap > 0) {
-                srcaddr = p.GetPacket().dstAddr().Clone();
-                dstaddr = p.GetPacket().srcAddr().Clone();
-                srcport = p.GetPacket().dstPort;
-                dstport = p.GetPacket().srcPort;
+                srcaddr = p.dstAddr().Clone();
+                dstaddr = p.srcAddr().Clone();
+                srcport = p.dstPort;
+                dstport = p.srcPort;
+                loc_packet_count=0;
+                rem_packet_count=1;
         } else {
-                srcaddr = p.GetPacket().srcAddr().Clone();
-                dstaddr = p.GetPacket().dstAddr().Clone();
-                srcport = p.GetPacket().srcPort;
-                dstport = p.GetPacket().dstPort;
+                srcaddr = p.srcAddr().Clone();
+                dstaddr = p.dstAddr().Clone();
+                srcport = p.srcPort;
+                dstport = p.dstPort;
+                loc_packet_count=1;
+                rem_packet_count=0;
         }
 
-	packet_count=1;
+        first_pkt_ts = util_get_current_time();
 
 	// init per-second stats counters
-	last_pkt_ts = time(NULL);
+	last_pkt_ts = first_pkt_ts;
 	activity_toggle=true;
 
 	//payload_byte_count = p.GetPacket().payloadLen()-p.GetPacket().tcp().headerLen();
-	total_byte_count = p.GetPacket().totalLen();
-	total_bytes_this_interval = p.GetPacket().totalLen();
+	total_byte_count = p.totalLen();
+	total_bytes_this_interval = p.totalLen();
 
-        IP_protocol = p.GetPacket().IP_protocol;
+        IP_protocol = p.IP_protocol;
 
 	avg_bps=0;
 
@@ -141,18 +149,15 @@ Connection::Connection( TCPCapture &p )
 
 void Connection::purgeAvgStack()
 {
-	struct timeval now;
-	gettimeofday(&now,NULL);
-
 	// Keep 3 seconds of statistics
-	uint64_t limit;
-	limit = now.tv_sec * 1000000 + now.tv_usec;
-	limit -= 3 * 1000000;
+	util_time_t limit;
+	limit = util_get_current_time();
+	limit -= (util_time_t)3 * 1000000000;
 
 	list<struct avgstat>::iterator i;
 	for( i=avgstack.begin(); i!=avgstack.end(); i++ )
 	{
-		if( i->ts <= limit )
+		if( i->as_ts <= limit )
 		{
 			avgstack.erase(i,avgstack.end());
 			break;
@@ -166,12 +171,9 @@ void Connection::updateCounters()
 {
 	purgeAvgStack();
 
-	struct timeval now;
-	gettimeofday(&now,NULL);
-
 	struct avgstat s;
-	s.ts = now.tv_sec * 1000000 + now.tv_usec;
-	s.size = total_bytes_this_interval;
+	s.as_ts = util_get_current_time();
+	s.as_size = total_bytes_this_interval;
 	avgstack.push_front(s);
 
 	total_bytes_this_interval = 0;
@@ -181,22 +183,22 @@ void Connection::updateCounters()
 void Connection::recalcAvg()
 {
 	unsigned int total_bytes = 0;
-	uint64_t time1 = 0;
-	uint64_t time2 = 0;
+	util_time_t time1 = 0;
+	util_time_t time2 = 0;
 
 	list<struct avgstat>::iterator i;
 	for( i=avgstack.begin(); i!=avgstack.end(); i++ )
 	{
-		total_bytes += i->size;
-		time1 = i->ts;
+		total_bytes += i->as_size;
+		time1 = i->as_ts;
 		if (time2 == 0)
-			time2 = i->ts;
+			time2 = i->as_ts;
 	}
 
-	uint64_t time_interval = time2 - time1 + app->refresh_intvl;
+	util_time_t time_interval = time2 - time1 + (app->refresh_intvl*1000);
 	if (time_interval > 0)
 	{
-		avg_bps = total_bytes / (time_interval / 1000000.0);
+		avg_bps = total_bytes / (time_interval / 1000000000.0);
 	}
 	else
 	{
@@ -204,51 +206,83 @@ void Connection::recalcAvg()
 	}
 }
 
-time_t Connection::getLastPktTimestamp()
+util_time_t Connection::getFirstPktTimestamp()
+{
+	return first_pkt_ts;
+}
+
+util_time_t Connection::getLastPktTimestamp()
 {
 	return last_pkt_ts;
 }
 
-bool Connection::match( IPAddress &sa, IPAddress &da, portnum_t sp, portnum_t dp )
+bool Connection::match( Packet &pkt, int &swap )
 {
-        if( ! (*srcaddr == sa) )
+        if ( *srcaddr == pkt.srcAddr() ) {
+                if ( *dstaddr == pkt.dstAddr() ) {
+                        swap = 0;
+                } else {
+                        return false;
+                }
+        } else if ( *dstaddr == pkt.srcAddr() ) {
+                if ( *srcaddr == pkt.dstAddr() ) {
+                        swap = 1;
+                } else {
+                        return false;
+                }
+        } else {
 		return false;
-	if( !( *dstaddr == da) )
-		return false;
-        //TODO option to ignore port
-	if( dp != dstport  ||  sp != srcport )
-		return false;
+        }
+        if (!swap) {
+                if ( dstport != pkt.dstPort ) {
+                        return false;
+                }
+                // TODO conditionally compare src ports
+        } else {
+                if ( dstport != pkt.srcPort ) {
+                        return false;
+                }
+                // TODO conditionally compare src ports
+        }
 
 	return true;
 }
 
-time_t Connection::getIdleSeconds()
+util_time_t Connection::getIdleTimeNS()
 {
-	return time(NULL) - getLastPktTimestamp();
+	return util_get_current_time() - getLastPktTimestamp();
 }
 
-void Connection::updateCountersForPacket( TCPCapture &p )
+util_time_t Connection::getIdleSeconds()
+{
+	return getIdleTimeNS() / 1000000000;
+}
+
+void Connection::updateCountersForPacket( Packet &p )
 {
 	// TODO add an option for payload-based counters
 	//payload_bytes = p.GetPacket().payloadLen() - p.GetPacket().tcp().headerLen();
-	total_bytes_this_interval += p.GetPacket().totalLen();
-	total_byte_count += p.GetPacket().totalLen();
+	total_bytes_this_interval += p.totalLen();
+	total_byte_count += p.totalLen();
 }
 
-bool Connection::acceptPacket( TCPCapture &cap )
+bool Connection::acceptPacket( Packet &cap )
 {
-	Packet *p = &(cap.GetPacket());
+        int swap = 0;
 
-	if( match(p->srcAddr(), p->dstAddr(), p->srcPort, p->dstPort)
-		|| match(p->dstAddr(), p->srcAddr(), p->dstPort, p->srcPort) )
+	if( match( cap, swap ) )
 	{
-		++packet_count;
+                if (swap) {
+                        ++rem_packet_count;
+                } else {
+                        ++loc_packet_count;
+                }
 		activity_toggle=true;
 
 		// recalculate packets/bytes per second counters
 		updateCountersForPacket(cap);
 
-		last_pkt_ts = time(NULL);
+		last_pkt_ts = util_get_current_time();
 
 		return true;
 	}

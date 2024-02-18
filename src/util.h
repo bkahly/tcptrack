@@ -40,11 +40,13 @@
 #include "headers.h"
 #include "IPAddress.h"
 
+typedef uint64_t util_time_t;
+
 struct config
 {
 	char *iface; // interface to listen on
 	char *fexp;  // filter expression
-	unsigned int remto; // timeout to remove closed connections (secs)
+	util_time_t remto; // timeout to remove closed connections (secs)
 	bool detect; // detect pre-existing connections?
 	bool names;  // Convert addresses/ports to names?
 	bool promisc; // enable promisc mode?	        
@@ -53,18 +55,21 @@ struct config
 
 struct avgstat
 {
-	uint64_t ts;    // timestamp in microseconds
-	unsigned int size;
+	util_time_t as_ts;    // timestamp in nanoseconds
+	unsigned int as_size;
 };
 
 struct nlp
 {
 	u_char *p; // dont forget to free this!
 	unsigned int len;
-	struct timeval ts;
+	util_time_t nlp_ts;
 };
 
 struct nlp *getnlp( const u_char *p, int dlt, const pcap_pkthdr *pcap );
 bool checknlp( struct nlp *n );
+
+/* Convert current system time into nanoseconds past epoch for internal processing */
+util_time_t util_get_current_time();
 
 #endif

@@ -39,7 +39,6 @@
 #include "Connection.h"
 #include "SortedIterator.h"
 #include "util.h"
-#include "TCPCapture.h"
 
 #define TSTATE_IDLE 1
 #define TSTATE_RUNNING 2
@@ -67,7 +66,7 @@ public:
 	TCContainer();
 	~TCContainer();
 
-	bool processPacket( TCPCapture &p );
+	bool processPacket( Packet &p );
 	unsigned int numConnections();
 
 	void stop();

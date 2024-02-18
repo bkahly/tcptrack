@@ -43,7 +43,7 @@ TextUI::TextUI( TCContainer *c )
 	state=USTATE_IDLE;
 
 	paused=false;
-	sort_type=SORT_UN;
+	sort_type=SORT_FIRST;
 
 	pthread_mutex_init( &state_mutex, NULL );
 }
@@ -188,7 +188,7 @@ void TextUI::displayer_run()
 			{
 				switch( sort_type )
 				{
-					case SORT_UN:
+					case SORT_FIRST:
 						sort_type=SORT_RATE;
 						break;
 					case SORT_RATE:
@@ -201,7 +201,7 @@ void TextUI::displayer_run()
 						sort_type=SORT_ACTIVE;
 						break;
 					case SORT_ACTIVE:
-						sort_type=SORT_UN;
+						sort_type=SORT_FIRST;
 						break;
 				}
 			}
@@ -269,10 +269,10 @@ void TextUI::drawui()
 
 	if ((x != size_x) || (y != size_y))
 	{
-		if( x<69 )
+		if( x<78 )
 		{
 			endwin();
-			throw GenericError("tcptrack requires a screen at least 69 columns wide to run.");
+			throw GenericError("tcptrack requires a screen at least 78 columns wide to run.");
 		}
 
 		if( y<4 )
@@ -287,8 +287,8 @@ void TextUI::drawui()
 		bottom = y;
 	}
 
-	int extra_cl = (x > 78) ? (x - 78)/2 : 0;
-	int extra_sr = (x > 78) ? (x - 78 - extra_cl) : 0;
+	int extra_cl = (x > 89) ? (x - 89)/2 : 0;
+	int extra_sr = (x > 89) ? (x - 89 - extra_cl) : 0;
 
 	int c_client = 1;
 	int c_client_l = 15 + extra_cl;
@@ -296,11 +296,15 @@ void TextUI::drawui()
 	int c_clientpt_l = 5;
 	int c_server = c_clientpt + c_clientpt_l + 1;
 	int c_server_l = 15 + extra_sr;
-	int c_serverpt = c_server + c_server_l + 1;
+        int c_servercnt = c_server + c_server_l + 1;
+        int c_servercnt_l = 5;
+	int c_serverpt = c_servercnt + c_servercnt_l + 1;
 	int c_serverpt_l = 5;
 	int c_state = c_serverpt + c_serverpt_l + 1;
 	int c_state_l = 7;
-	int c_idle = c_state + c_state_l + 1;
+	int c_age = c_state + c_state_l + 1;
+	int c_age_l = 4;
+	int c_idle = c_age + c_age_l + 1;
 	int c_idle_l = 4;
 	int c_act = c_idle + c_idle_l + 1;
 	int c_act_l = 1;
@@ -316,11 +320,19 @@ void TextUI::drawui()
 	printw("%*.*s", size_x, size_x, " ");
 
 	move(0,c_client);
-	printw("Client");
+	printw("Local Addr");
+	move(0,c_clientpt);
+	printw("Pkts");
 	move(0,c_server);
-	printw("Server");
+	printw("Remote Addr");
+	move(0,c_serverpt);
+	printw("Port");
+	move(0,c_servercnt);
+	printw("Pkts");
 	move(0,c_state);
 	printw("%-*.*s", c_state_l, c_state_l, "Prot");
+	move(0,c_age);
+	printw("Age");
 	move(0,c_idle);
 	printw("Idle");
 	move(0,c_act);
@@ -354,8 +366,7 @@ void TextUI::drawui()
 
 	i->rewind();
 
-	if( sort_type != SORT_UN )
-		i->sort( sort_type );
+        i->sort( sort_type );
 
 	unsigned int ic_i=0; // for scrolling
 	while( Connection *ic=i->getNext() )
@@ -373,12 +384,17 @@ void TextUI::drawui()
 		{
 			int len = strlen(ic->srcHost);
 			int ind = (len > c_client_l) ? (len - c_client_l) : 0;
-			printw("%*.*s %-5.5s", c_client_l, c_client_l,
-				ic->srcHost+ind, ic->srcService );
+			printw("%*.*s", c_client_l, c_client_l, ic->srcHost+ind );
 		}
 		else
-			printw("%-*.*s %5d", c_client_l, c_client_l,
-				ic->srcAddr().ptr(), ic->srcPort() );
+			printw("%-*.*s", c_client_l, c_client_l, ic->srcAddr().ptr() );
+
+		move(row,c_clientpt);
+                if (ic->getLocalPacketCount() > 99999) 
+                        printw(">9999" );
+                else
+                        printw("%*d", c_clientpt_l, ic->getLocalPacketCount() );
+
 		if( ic->srcAddr().GetType() == 6 )
 			row++;
 
@@ -387,14 +403,25 @@ void TextUI::drawui()
 		{
 			int len = strlen(ic->dstHost);
 			int ind = (len > c_server_l) ? (len - c_server_l) : 0;
-			printw("%*.*s %-5.5s", c_server_l, c_server_l,
-				ic->dstHost+ind, ic->dstService );
+			printw("%*.*s", c_server_l, c_server_l, ic->dstHost+ind );
 		}
 		else
-			printw("%-*.*s %5d", c_server_l, c_server_l,
-				ic->dstAddr().ptr(), ic->dstPort());
+			printw("%-*.*s", c_server_l, c_server_l, ic->dstAddr().ptr());
+
+		move(row,c_serverpt);
+		if (ic->dstService[0] != 0)
+                        printw("%-5.5s", ic->dstService );
+                else
+                        printw("%-5d", ic->dstPort() );
+
 		if( ic->srcAddr().GetType() == 6 )
 			row--;
+
+		move(row,c_servercnt);
+                if ( ic->getRemotePacketCount() > 99999 )
+                        printw(">9999");
+                else
+                        printw("%*d", c_servercnt_l, ic->getRemotePacketCount() );
 
 		move(row,c_state);
 		printw("             ");
@@ -411,6 +438,17 @@ void TextUI::drawui()
                     printw("%*d", c_state_l, ic->IP_protocol);
                 }
                 //TODO Improve protocol to text conversions
+
+                util_time_t age = util_get_current_time() - ic->getFirstPktTimestamp(); 
+                age /= 1000000000;
+
+		move(row,c_age);
+		if( age < 60 )
+			printw("%2ds",(int)age);
+		else if( age < 3600 )
+			printw("%2dm",(int)(age/60));
+		else
+			printw("%2dh",(int)(age/3600));
 
 		move(row,c_idle);
 		if( ic->getIdleSeconds() < 60 )
@@ -490,12 +528,11 @@ void TextUI::drawui()
 	move(bottom-1,56);
 	switch( sort_type )
 	{
-		case SORT_UN:
-			printw("Un");
+		case SORT_FIRST:
 			attron(A_UNDERLINE);
-			printw("s");
+			printw("S");
 			attroff(A_UNDERLINE);
-			printw("orted");
+			printw("orted by most recently detected");
 			break;
 		case SORT_RATE:
 			attron(A_UNDERLINE);

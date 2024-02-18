@@ -2,10 +2,9 @@ bin_PROGRAMS = tcptrack
 
 tcptrack_SOURCES = Collector.cc main.cc TCContainer.cc \
                  TextUI.cc  PacketBuffer.cc \
-                 Sniffer.cc TCPConnection.cc util.cc \
-                 SortedIterator.cc TCPPacket.cc \
+                 Sniffer.cc Connection.cc util.cc \
+                 SortedIterator.cc Packet.cc \
                  IPv4Address.cc IPv6Address.cc \
-                 TCPCapture.cc \
                  TCPTrack.cc SocketPair.cc \
 								 IPAddress.cc \
                  AppError.cc PcapError.cc GenericError.cc Guesser.cc
@@ -13,9 +12,8 @@ tcptrack_SOURCES = Collector.cc main.cc TCContainer.cc \
 noinst_HEADERS = Collector.h PacketBuffer.h TextUI.h \
 								 defs.h Sniffer.h headers.h \
 								 SortedIterator.h util.h TCContainer.h \
-								 TCPConnection.h Guesser.h \
-								 TCPPacket.h IPv4Address.h IPv6Address.h \
-								 TCPCapture.h \
+								 Connection.h Guesser.h \
+								 Packet.h IPv4Address.h IPv6Address.h \
 								 TCPTrack.h SocketPair.h \
 								 IPAddress.h \
 								 AppError.h PcapError.h GenericError.h

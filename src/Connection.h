@@ -28,7 +28,6 @@
 #include <list>
 #include "util.h"
 #include "Packet.h"
-#include "TCPCapture.h"
 
 using namespace std;
 
@@ -40,17 +39,16 @@ public:
 	// constructor, which needs the initial packet that created this
 	// connection, or any packet that is going from client->server.
 	// See comments in Guesser.cc for an explanation...
-	Connection( TCPCapture &p );
+	Connection( Packet &p );
 	~Connection();
 
-	// returns true if the given addresses/ports are relevant to this
-	// connection.
-	bool match(IPAddress &sa, IPAddress &da, portnum_t sp, portnum_t dp);
+	// returns true if the given Packet is relevant to this connection.
+	bool match( Packet &p, int &swap );
 
 	// see if packet p is relevant to this connection.
 	// if it is, true will be returned and this object's internal
 	// state will be changed to reflect the new packet.
-	bool acceptPacket( TCPCapture &p );
+	bool acceptPacket( Packet &p );
 
 	// get the addresses/ports which are the endpoints for this
 	// connection.
@@ -66,10 +64,17 @@ public:
 
         unsigned short IP_protocol;
 
+	// timestamp of first packet seen
+	util_time_t getFirstPktTimestamp();
+
 	// timestamp of last packet sent either way
-	time_t getLastPktTimestamp();
+	util_time_t getLastPktTimestamp();
+
+	// number of nanoseconds since last packet sent either way
+	util_time_t getIdleTimeNS();
+
 	// number of seconds since last packet sent either way
-	time_t getIdleSeconds();
+	util_time_t getIdleSeconds();
 
 	// called to perform internal updates to counters and stuff.
 	// should be called exactly once per refresh interval.
@@ -83,8 +88,9 @@ public:
 	// since the last time it was called.
 	bool activityToggle();
 
-	// number of packets sent either way in total for this connection
-	int getPacketCount();
+	// number of packets sent for this connection
+	int getLocalPacketCount();
+	int getRemotePacketCount();
 
 	// number of bytes sent either way in total for this connection
 	long getTotalByteCount();
@@ -97,7 +103,7 @@ public:
 
 private:
 	void purgeAvgStack();
-	void updateCountersForPacket( TCPCapture &p );
+	void updateCountersForPacket( Packet &p );
 
 	unsigned long finack_from_dst;
 	unsigned long finack_from_src;
@@ -109,9 +115,11 @@ private:
 	IPAddress *srcaddr; // client addr
 	IPAddress *dstaddr; // server addr
 
-	time_t last_pkt_ts;
+	util_time_t first_pkt_ts;
+	util_time_t last_pkt_ts;
 
-	int packet_count;
+	int loc_packet_count;
+	int rem_packet_count;
 
 	long total_byte_count;
 
